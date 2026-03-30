@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Panel - Tracking</title>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #f4f4f4;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: orange;
+      color: white;
+      border: none;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+  <h2>📦 Admin Panel</h2>
+
+  <input id="code" placeholder="Tracking Code">
+  <input id="from" placeholder="From">
+  <input id="to" placeholder="To">
+  <input id="status" placeholder="Status">
+
+  <textarea id="history" placeholder="History (one per line)
+Example:
+Package received - China
+In transit - Dubai
+Delivered - Philippines"></textarea>
+
+  <button onclick="saveData()">SAVE TRACKING</button>
+</div>
+
+<script>
+  // 🔥 YOUR FIREBASE CONFIG HERE
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+  };
+
+  const app = firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  async function saveData() {
+    let code = document.getElementById("code").value;
+    let from = document.getElementById("from").value;
+    let to = document.getElementById("to").value;
+    let status = document.getElementById("status").value;
+
+    let historyText = document.getElementById("history").value.split("\n");
+
+    let history = historyText.map(item => ({
+      text: item,
+      date: new Date().toLocaleString()
+    }));
+
+    await db.collection("shipments").doc(code).set({
+      from,
+      to,
+      status,
+      history
+    });
+
+    alert("✅ Saved successfully!");
+  }
+</script>
+
+</body>
+</html>
