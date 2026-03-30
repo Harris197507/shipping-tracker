@@ -65,11 +65,16 @@ Delivered - Philippines"></textarea>
 
 <script>
   // 🔥 YOUR FIREBASE CONFIG HERE
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-  };
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBQr2KtnYQWNUmFu_54AUzmM1zMw2las14",
+  authDomain: "fedex-tracking-system.firebaseapp.com",
+  projectId: "fedex-tracking-system",
+  storageBucket: "fedex-tracking-system.firebasestorage.app",
+  messagingSenderId: "936338746045",
+  appId: "1:936338746045:web:b325204663ef1f7bece5d4",
+  measurementId: "G-ZGWD5F7LP5"
+};
 
   const app = firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
