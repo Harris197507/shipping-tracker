@@ -44,15 +44,19 @@ button {
 </head>
         
 <body>
-<div class="header"></div>
-  <img src="https://upload.wikimedia.org/wikipedia/commo
+<div class="header">
+  <h2>Global Express Tracking</h2>
 </div>
 <div class="container">
-    <h2>Track Your Shipment</h2>
+  <h2>Track Your Shipment</h2>
+<div class="progress">
+  <div class="progress-bar" id="progress-bar"></div>
+</div>
 
-    <input type="text" id="code" placeholder="Enter tracking code">
-    <button onclick="track()">Track</button>
+<p id="delivery-msg" style="color: green; font-weight: bold;"></p>
 
+<input type="text" id="code" placeholder="Enter tracking code">
+<button onclick="track()">Track</button>
     <div class="result" id="result">
         <p><strong>Tracking Code:</strong> <span id="tcode"></span></p>
         <p><strong>From:</strong> <span id="from"></span></p>
