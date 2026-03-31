@@ -4,77 +4,106 @@
   <title>Global Express Tracking</title>
 
   <style>
-    body {
-      font-family: Arial;
-      background: #f4f6f8;
-      margin: 0;
-    }
+* {
+  box-sizing: border-box;
+}
 
-    .header {
-      background: #4b0082;
-      color: white;
-      text-align: center;
-      padding: 15px;
-      font-size: 20px;
-      font-weight: bold;
-    }
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #f4f6f9;
+  margin: 0;
+}
 
-    .container {
-      max-width: 500px;
-      margin: 30px auto;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
+/* HEADER */
+.header {
+  background: #4D148C;
+  color: white;
+  padding: 18px;
+  font-size: 22px;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
-    h2 {
-      text-align: center;
-    }
+/* CARD */
+.container {
+  max-width: 500px;
+  margin: 40px auto;
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+}
 
-    input {
-      width: 100%;
-      padding: 12px;
-      margin: 10px 0;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-    }
+/* INPUT */
+input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  margin-bottom: 10px;
+  font-size: 16px;
+}
 
-    button {
-      width: 100%;
-      padding: 12px;
-      background: orange;
-      color: white;
-      border: none;
-      font-weight: bold;
-      border-radius: 5px;
-    }
+/* BUTTON */
+button {
+  width: 100%;
+  padding: 12px;
+  background: #ff6600;
+  border: none;
+  color: white;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.3s;
+}
 
-    .result {
-      margin-top: 20px;
-      padding: 15px;
-      background: #f9f9f9;
-      border-radius: 8px;
-    }
+button:hover {
+  background: #e65c00;
+}
 
-    .status {
-      font-weight: bold;
-      color: green;
-    }
+/* STATUS */
+.status {
+  font-weight: bold;
+  color: #28a745;
+  margin-top: 15px;
+}
 
-    .progress {
-      height: 8px;
-      background: #ddd;
-      border-radius: 10px;
-      margin: 15px 0;
-    }
+/* PROGRESS */
+.progress {
+  background: #eee;
+  border-radius: 20px;
+  overflow: hidden;
+  margin: 10px 0;
+}
 
-    .progress-bar {
-      height: 100%;
-      background: green;
-      border-radius: 10px;
-    }
-  </style>
+.progress-bar {
+  height: 10px;
+  background: linear-gradient(90deg, #4D148C, #ff6600);
+  transition: width 0.5s ease;
+}
+
+p {
+  margin: 8px 0;
+}
+
+ul {
+  padding-left: 18px;
+}
+
+li {
+  margin-bottom: 6px;
+}
+
+.delivery-box {
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 6px;
+  margin-top: 10px;
+  font-size: 14px;
+}
+</style>
 </head>
 
 <body>
@@ -92,73 +121,55 @@
 
 <script type="module">
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+async function track() {
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBQr2KtnYQWNUmFu_...",
-  authDomain: "fedex-tracking-system.firebaseapp.com",
-  projectId: "fedex-tracking-system",
-  storageBucket: "fedex-tracking-system.appspot.com",
-  messagingSenderId: "936338746045",
-  appId: "1:936338746045:web:b325...",
-  measurementId: "G-ZGWD5F7LP5"
-};
+  const trackingCode = document.getElementById("tracking-input").value;
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-window.track = async function () {
-
-  let code = document.getElementById("tracking-input").value;
-
-  const docRef = doc(db, "shipments", code);
+  const docRef = doc(db, "tracking", trackingCode);
   const docSnap = await getDoc(docRef);
 
   if (docSnap.exists()) {
 
     const data = docSnap.data();
-let totalSteps = data.totalSteps || data.history.length;
-let progress = (data.history.length / totalSteps) * 100;
 
-let today = new Date();
-let delivery = new Date(data.deliveryDate);
+    let statusColor = "#ff9800";
 
-let timeDiff = delivery - today;
-let daysLeft = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+    if (data.status === "Delivered") statusColor = "#28a745";
+    if (data.status === "Pending") statusColor = "#dc3545";
 
-      "<p class='status'>Status: " + data.status + "</p>" +
 
-      "<div class='progress'>" +
-      "<div class='progress-bar' style='width:" + progress + "%'></div>" +
-      "</div>" +
 
-     "<p><strong>From:</strong> " + data.from + "</p>" +
-"<p><strong>To:</strong> " + data.to + "</p>" +
-"<p><strong>Estimated Delivery:</strong> " + data.deliveryDate + "</p>" +
+let historyHTML = "";
 
-      "<hr>" +
-
-      let historyHTML = "";
-
-data.history.forEach(item => {
-  historyHTML += "<li>" + item + "</li>";
+data.history.forEach((item, index) => {
+  historyHTML += `
+    <div class="timeline-item">
+      <div class="circle"></div>
+      <div class="content">${item}</div>
+    </div>
+  `;
 });
 
 document.getElementById("result").innerHTML =
-"<p class='status'>Status: " + data.status + "</p>" +
+  "<p class='status' style='color:" + statusColor + "'>Status: " + data.status + "</p>" +
 
-"<div class='progress'>" +
-"<div class='progress-bar' style='width:" + progress + "%'></div>" +
-"</div>" +
+  "<div class='progress'>" +
+  "<div class='progress-bar' style='width:" + progress + "%'></div>" +
+  "</div>" +
 
-"<p><strong>From:</strong> " + data.from + "</p>" +
-"<p><strong>To:</strong> " + data.to + "</p>" +
+  "<p><strong>From:</strong> " + data.from + "</p>" +
+  "<p><strong>To:</strong> " + data.to + "</p>" +
 
-"<hr>" +
+  "<div class='delivery-box'>" +
+  "<p><strong>Estimated Delivery:</strong> " + data.deliveryDate + "</p>" +
+  "<p><strong>Days Left:</strong> " + daysLeft + " day(s)</p>" +
+  "</div>" +
 
-"<h3>Shipment History</h3>" +
-"<ul>" + historyHTML + "</ul>";
+"<div class='timeline'>" + historyHTML + "</div>";
+
+  
+
+      
 
   } else {
     alert("Tracking code not found");
