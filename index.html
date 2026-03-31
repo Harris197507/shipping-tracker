@@ -101,13 +101,21 @@ window.track = async function () {
   const docSnap = await getDoc(docRef);
 
   if (docSnap.exists()) {
-    const data = docSnap.data();
+    const data = 
+      document.getElementById("result").innerHTML = `
+  <p class="status">Status: ${data.status}</p>
+  <p><strong>From:</strong> ${data.from}</p>
+  <p><strong>To:</strong> ${data.to}</p>
 
-    document.getElementById("result").innerHTML = `
-      <p class="status">Status: ${data.status}</p>
-      <p><strong>From:</strong> ${data.from}</p>
-      <p><strong>To:</strong> ${data.to}</p>
-    `;
+  <hr>
+
+  <h3>Shipment History</h3>
+  <ul>
+    <li>📦 Package received - China</li>
+    <li>✈️ In transit - Dubai</li>
+    <li>🚚 Out for delivery</li>
+  </ul>
+`;
   } else {
     alert("Tracking code not found");
   }
