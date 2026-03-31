@@ -118,11 +118,14 @@ window.track = async function () {
   if (docSnap.exists()) {
 
     const data = docSnap.data();
-
-    let totalSteps = data.totalSteps || data.history.length;
+let totalSteps = data.totalSteps || data.history.length;
 let progress = (data.history.length / totalSteps) * 100;
 
-    document.getElementById("result").innerHTML =
+let today = new Date();
+let delivery = new Date(data.deliveryDate);
+
+let timeDiff = delivery - today;
+let daysLeft = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
 
       "<p class='status'>Status: " + data.status + "</p>" +
 
