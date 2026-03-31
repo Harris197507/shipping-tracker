@@ -1,20 +1,85 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Tracking</title>
+  <title>Global Express Tracking</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #f4f6f8;
+      margin: 0;
+    }
+
+    .header {
+      background: #4b0082;
+      color: white;
+      text-align: center;
+      padding: 15px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 30px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: orange;
+      color: white;
+      border: none;
+      font-weight: bold;
+      border-radius: 5px;
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f9f9f9;
+      border-radius: 8px;
+    }
+
+    .status {
+      font-weight: bold;
+      color: green;
+    }
+  </style>
 </head>
+
 <body>
 
-<h2>Track Package</h2>
+<div class="header">Global Express Tracking</div>
 
-<input id="tracking-input" placeholder="Enter Tracking Code"><br><br>
-<button onclick="track()">Track</button>
+<div class="container">
+  <h2>Track Your Shipment</h2>
 
-<div id="result"></div>
+  <input id="tracking-input" placeholder="Enter tracking code">
+  <button onclick="track()">Track</button>
+
+  <div id="result" class="result"></div>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, getDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBQr2KtnYQWNUmFu_...",
@@ -30,7 +95,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 window.track = async function () {
-  const code = document.getElementById("tracking-input").value;
+  let code = document.getElementById("tracking-input").value;
 
   const docRef = doc(db, "shipments", code);
   const docSnap = await getDoc(docRef);
@@ -39,9 +104,9 @@ window.track = async function () {
     const data = docSnap.data();
 
     document.getElementById("result").innerHTML = `
-      <p>Status: ${data.status}</p>
-      <p>From: ${data.from}</p>
-      <p>To: ${data.to}</p>
+      <p class="status">Status: ${data.status}</p>
+      <p><strong>From:</strong> ${data.from}</p>
+      <p><strong>To:</strong> ${data.to}</p>
     `;
   } else {
     alert("Tracking code not found");
