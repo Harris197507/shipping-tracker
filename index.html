@@ -125,7 +125,7 @@ async function track() {
 alert("Track clicked!");
   const trackingCode = document.getElementById("tracking-input").value;
 
-  const docRef = doc(db, "tracking", trackingCode);
+  const const docRef = doc(db, "shipments", trackingCode);
   const docSnap = await getDoc(docRef);
 
   if (docSnap.exists()) {
