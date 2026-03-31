@@ -122,7 +122,7 @@ li {
 <script type="module">
 
 async function track() {
-
+alert("Track clicked!");
   const trackingCode = document.getElementById("tracking-input").value;
 
   const docRef = doc(db, "tracking", trackingCode);
@@ -174,8 +174,10 @@ document.getElementById("result").innerHTML =
   } else {
     alert("Tracking code not found");
   }
+}
+  window.onload = function() {
+  document.getElementById("track-btn").addEventListener("click", track);
 };
-document.getElementById("track-btn").addEventListener("click", track);
 </script>
 
 </body>
