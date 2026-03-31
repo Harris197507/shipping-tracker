@@ -1,127 +1,52 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Global Shipment Tracking</title>
-<style>
-body { font-family: Arial; background:#f5f5f5; }
-.container {
-    max-width: 600px;
-    margin: 40px auto;
-    background: #fff;
-    padding: 20px;
-    border-radius: 8px;
-}
-input, button {
-    padding: 10px;
-    width: 100%;
-    margin-top: 10px;
-}
-.result { margin-top:20px; display:none; }
-.timeline {
-    margin-top: 20px;
-    border-left: 3px solid #333;
-    padding-left: 15px;
-}
-.event { margin-bottom: 15px; }
-</style>  
-    <style>
-.header {
-    background: #4d148c;
-    color: white;
-    padding: 15px;
-    text-align: center;
-    font-weight: bold;
-}
-button {
-    background: #ff6600 !important;
-    color: white;
-}
-.timeline {
-    border-left: 3px solid #4d148c !important;
-}
-</style>
+  <title>Tracking</title>
 </head>
-        
 <body>
-<div class="header">
-  <h2>Global Express Tracking</h2>
-</div>
-<div class="container">
-  <h2>Track Your Shipment</h2>
-<div class="progress">
-  <div class="progress-bar" id="progress-bar"></div>
-</div>
 
-<p id="delivery-msg" style="color: green; font-weight: bold;"></p>
+<h2>Track Package</h2>
 
-<input type="text" id="code" placeholder="Enter tracking code">
+<input id="tracking-input" placeholder="Enter Tracking Code"><br><br>
 <button onclick="track()">Track</button>
-    <div class="result" id="result">
-        <p><strong>Tracking Code:</strong> <span id="tcode"></span></p>
-        <p><strong>From:</strong> <span id="from"></span></p>
-        <p><strong>To:</strong> <span id="to"></span></p>
-        <p><strong>Status:</strong> <span id="status"></span></p>
 
-        <div class="timeline" id="timeline"></div>
-    </div>
+<div id="result"></div>
 
-<script>
-const shipments = {
-    "FXCHPH001": {
-        from: "China",
-        to: "Philippines",
-        status: "In Transit",
-        history: [
-            {location: "Shenzhen, China", status: "Package received", time: "March 28, 10:00 AM"},
-            {location: "Guangzhou, China", status: "Departed facility", time: "March 28, 6:00 PM"},
-            {location: "Hong Kong", status: "Export customs cleared", time: "March 29, 9:00 AM"},
-            {location: "Dubai, UAE", status: "In transit", time: "March 29, 8:00 PM"},
-            {location: "Manila, Philippines", status: "Arrived at destination country", time: "March 30, 7:00 AM"}
-        ]
-    },
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, getDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    "FXCHPH002": {
-        from: "China",
-        to: "Philippines",
-        status: "Out for Delivery",
-        history: [
-            {location: "Shanghai, China", status: "Package received", time: "March 27, 9:00 AM"},
-            {location: "Hong Kong", status: "Export cleared", time: "March 28, 12:00 PM"},
-            {location: "Manila, Philippines", status: "Arrived at facility", time: "March 29, 5:00 PM"},
-            {location: "Manila, Philippines", status: "Out for delivery", time: "March 30, 8:00 AM"}
-        ]
-    }
+const firebaseConfig = {
+  apiKey: "AIzaSyBQr2KtnYQWNUmFu_...",
+  authDomain: "fedex-tracking-system.firebaseapp.com",
+  projectId: "fedex-tracking-system",
+  storageBucket: "fedex-tracking-system.appspot.com",
+  messagingSenderId: "936338746045",
+  appId: "1:936338746045:web:b325...",
+  measurementId: "G-ZGWD5F7LP5"
 };
 
-function track() {
-    let code = document.getElementById("code").value.trim();
-    let data = shipments[code];
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-    if (!data) {
-        alert("Tracking code not found");
-        return;
-    }
+window.track = async function () {
+  const code = document.getElementById("tracking-input").value;
 
-    document.getElementById("result").style.display = "block";
-    document.getElementById("tcode").innerText = code;
-    document.getElementById("from").innerText = data.from;
-    document.getElementById("to").innerText = data.to;
-    document.getElementById("status").innerText = data.status;
+  const docRef = doc(db, "shipments", code);
+  const docSnap = await getDoc(docRef);
 
-    let timeline = document.getElementById("timeline");
-    timeline.innerHTML = "";
+  if (docSnap.exists()) {
+    const data = docSnap.data();
 
-    data.history.forEach(event => {
-        timeline.innerHTML += `
-            <div class="event">
-                <strong>${event.status}</strong><br>
-                ${event.location}<br>
-                <small>${event.time}</small>
-            </div>
-        `;
-    });
-}
+    document.getElementById("result").innerHTML = `
+      <p>Status: ${data.status}</p>
+      <p>From: ${data.from}</p>
+      <p>To: ${data.to}</p>
+    `;
+  } else {
+    alert("Tracking code not found");
+  }
+};
 </script>
 
 </body>
