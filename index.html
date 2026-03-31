@@ -61,19 +61,19 @@
       font-weight: bold;
       color: green;
     }
-    .progress {
-  height: 8px;
-  background: #ddd;
-  border-radius: 10px;
-  margin: 15px 0;
-}
 
-.progress-bar {
-  height: 100%;
-  background: green;
-  width: 70%;
-  border-radius: 10px;
-}
+    .progress {
+      height: 8px;
+      background: #ddd;
+      border-radius: 10px;
+      margin: 15px 0;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: green;
+      border-radius: 10px;
+    }
   </style>
 </head>
 
@@ -91,6 +91,7 @@
 </div>
 
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -108,42 +109,46 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 window.track = async function () {
+
   let code = document.getElementById("tracking-input").value;
 
   const docRef = doc(db, "shipments", code);
   const docSnap = await getDoc(docRef);
 
   if (docSnap.exists()) {
-     const data = docSnap.data();
 
- let progress = 30;
- if (data.status === "In transit") progress = 70;
- if (data.status === "Delivered") progress = 100;
+    const data = docSnap.data();
 
-  document.getElementById("result").innerHTML =
-"<p class='status'>Status: " + data.status + "</p>" +
+    let progress = 30;
+    if (data.status === "In transit") progress = 70;
+    if (data.status === "Delivered") progress = 100;
 
-"<div class='progress'>" +
-"<div class='progress-bar' style='width:" + progress + "%'></div>" +
-"</div>" +
+    document.getElementById("result").innerHTML =
 
-"<p><strong>From:</strong> " + data.from + "</p>" +
-"<p><strong>To:</strong> " + data.to + "</p>" +
+      "<p class='status'>Status: " + data.status + "</p>" +
 
-"<hr>" +
+      "<div class='progress'>" +
+      "<div class='progress-bar' style='width:" + progress + "%'></div>" +
+      "</div>" +
 
-"<h3>Shipment History</h3>" +
-"<ul>" +
-"<li>📦 Package received – China</li>" +
-"<li>✈️ In transit – Dubai</li>" +
-"<li>🚚 Out for delivery</li>" +
-"</ul>";
+      "<p><strong>From:</strong> " + data.from + "</p>" +
+      "<p><strong>To:</strong> " + data.to + "</p>" +
+
+      "<hr>" +
+
+      "<h3>Shipment History</h3>" +
+      "<ul>" +
+      "<li>📦 Package received – China</li>" +
+      "<li>✈️ In transit – Dubai</li>" +
+      "<li>🚚 Out for delivery</li>" +
+      "</ul>";
+
   } else {
     alert("Tracking code not found");
   }
 };
+
 </script>
 
 </body>
 </html>
-<!-- test -->
