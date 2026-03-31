@@ -1,1 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GlobeX Logistics</title>
 
+<style>
+body {font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9;transition:0.3s;}
+.dark{background:#0d1117;color:white;}
+
+.header{background:linear-gradient(90deg,#4D148C,#FF6600);color:white;padding:20px;text-align:center;font-weight:bold;font-size:22px;}
+.header p{font-size:13px;margin-top:5px;}
+
+.container{max-width:500px;margin:20px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 5px 20px rgba(0,0,0,0.1);}
+.dark .container{background:#161b22;}
+
+input,textarea{width:100%;padding:12px;margin-top:8px;border-radius:8px;border:1px solid #ccc;}
+button{width:100%;padding:12px;margin-top:10px;background:#FF6600;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
+
+.status{padding:10px;border-radius:8px;margin-top:10px;color:white;}
+.history{background:#eee;padding:10px;margin-top:6px;border-radius:8px;}
+.dark .history{background:#30363d;}
+
+.loader{text-align:center;margin-top:20px;}
+.hidden{display:none;}
+
+.toggle{position:fixed;top:10px;right:10px;}
+.admin-btn{position:fixed;bottom:20px;right:20px;}
+
+.timeline{border-left:3px solid #FF6600;padding-left:10px;margin-top:10px;}
+</style>
+</head>
+
+<body>
+
+<div class="toggle">
+<button onclick="toggleDark()">🌙</button>
+</div>
+
+<div class="header">
+  GlobeX Logistics
+  <p>Delivering Beyond Borders</p>
+</div>
+
+<div class="container" id="trackPage">
+<h2>Track Shipment</h2>
+<input id="trackInput" placeholder="Enter tracking code(s)">
+<button onclick="track()">Track</button>
+<div id="result"></div>
+</div>
+
+<div class="container hidden" id="loginPage">
+<h2>Admin Login</h2>
+<input id="pass" placeholder="Password">
+<button onclick="login()">Login</button>
+</div>
+
+<div class="container hidden" id="adminPage">
+<h2>Admin Panel</h2>
+
+<input id="code" placeholder="Tracking Code">
+<input id="from" placeholder="From">
+<input id="to" placeholder="To">
+<input id="status" placeholder="Status">
+<input id="date" placeholder="Delivery Date">
+<textarea id="history" placeholder="History comma separated"></textarea>
+
+<button onclick="save()">Save / Update</button>
+
+<div id="list"></div>
+</div>
+
+<button class="admin-btn" onclick="openAdmin()">⚙️</button>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, getDocs, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig={
+apiKey:"AIzaSyBQr2KtnYQWNUmFu_54AUzmM1zMw2las14",
+authDomain:"fedex-tracking-system.firebaseapp.com",
+projectId:"fedex-tracking-system"
+};
+
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
+
+if(localStorage.getItem("dark")==="true"){document.body.classList.add("dark");}
+
+window.toggleDark=function(){
+document.body.classList.toggle("dark");
+localStorage.setItem("dark",document.body.classList.contains("dark"));
+}
+
+function color(status){
+if(status==="Delivered") return "#28a745";
+if(status==="Pending") return "#dc3545";
+return "#ff9800";
+}
+
+window.track=async function(){
+const codes=document.getElementById("trackInput").value.split(",");
+document.getElementById("result").innerHTML=`<div class="loader">⏳ Loading...</div>`;
+let html="";
+
+for(const raw of codes){
+const code=raw.trim();
+if(!code) continue;
+
+const snap=await getDoc(doc(db,"shipments",code));
+
+if(!snap.exists()){
+html+=`<p>❌ ${code} not found</p>`;
+continue;
+}
+
+const d=snap.data();
+let history="";
+
+d.history.forEach(h=>{
+history+=`<div class="history">${h}</div>`;
+});
+
+html+=`
+<h3>${code}</h3>
+<div class="status" style="background:${color(d.status)}">Status: ${d.status}</div>
+<p><b>From:</b> ${d.from}</p>
+<p><b>To:</b> ${d.to}</p>
+<div class="timeline">${history}</div>
+<div style="background:#d4edda;padding:10px;border-radius:8px;margin-top:10px;">
+Delivery: ${d.deliveryDate}
+</div>
+`;
+}
+
+document.getElementById("result").innerHTML=html;
+}
+
+document.getElementById("trackInput").addEventListener("keypress",e=>{
+if(e.key==="Enter") track();
+});
+
+window.openAdmin=function(){
+document.getElementById("trackPage").classList.add("hidden");
+document.getElementById("loginPage").classList.remove("hidden");
+}
+
+window.login=function(){
+if(document.getElementById("pass").value==="admin123"){
+document.getElementById("loginPage").classList.add("hidden");
+document.getElementById("adminPage").classList.remove("hidden");
+load();
+}else alert("Wrong password");
+}
+
+window.save=async function(){
+await setDoc(doc(db,"shipments",document.getElementById("code").value),{
+from:document.getElementById("from").value,
+to:document.getElementById("to").value,
+status:document.getElementById("status").value,
+deliveryDate:document.getElementById("date").value,
+history:document.getElementById("history").value.split(",")
+});
+load();
+}
+
+async function load(){
+const snap=await getDocs(collection(db,"shipments"));
+let html="";
+snap.forEach(d=>{
+html+=`<div class="history">${d.id}
+<button onclick="del('${d.id}')">Delete</button>
+</div>`;
+});
+document.getElementById("list").innerHTML=html;
+}
+
+window.del=async function(id){
+await deleteDoc(doc(db,"shipments",id));
+load();
+}
+</script>
+
+</body>
+</html>
