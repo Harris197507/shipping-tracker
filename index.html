@@ -101,7 +101,7 @@ window.track = async function () {
   const docSnap = await getDoc(docRef);
 
   if (docSnap.exists()) {
-    const data = 
+    const data = docSnap.data();
       document.getElementById("result").innerHTML = `
   <p class="status">Status: ${data.status}</p>
   <p><strong>From:</strong> ${data.from}</p>
