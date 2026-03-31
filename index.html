@@ -131,7 +131,7 @@ const firebaseConfig = {
   measurementId: "G-ZGWD5F7LP5"
 };
 async function track() {
-alert("Track clicked!");
+
   const trackingCode = document.getElementById("tracking-input").value;
 
 const docRef = doc(db, "shipments", trackingCode);
