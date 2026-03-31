@@ -1,1 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GlobeX Logistics</title>
 
+<style>
+body{font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9;transition:.3s}
+.dark{background:#0d1117;color:#fff}
+
+.header{background:linear-gradient(90deg,#4D148C,#FF6600);color:#fff;padding:20px;text-align:center;font-weight:bold;font-size:22px}
+.header p{font-size:13px;margin-top:5px}
+
+.container{max-width:520px;margin:20px auto;background:#fff;padding:20px;border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.1)}
+.dark .container{background:#161b22}
+
+input,textarea{width:100%;padding:12px;margin-top:8px;border-radius:8px;border:1px solid #ccc}
+button{width:100%;padding:12px;margin-top:10px;background:#FF6600;color:#fff;border:none;border-radius:8px;font-weight:bold;cursor:pointer}
+
+.status{padding:12px;border-radius:10px;margin-top:10px;color:#fff;font-weight:600}
+.history{background:#eee;padding:12px;margin-top:8px;border-radius:10px}
+.dark .history{background:#30363d}
+
+.timeline{border-left:4px solid #FF6600;padding-left:12px;margin-top:10px}
+.loader{text-align:center;margin-top:20px}
+.hidden{display:none}
+
+.toggle{position:fixed;top:10px;right:10px}
+.admin-btn{
+position:fixed;bottom:80px;right:20px;width:55px;height:55px;border-radius:50%;
+background:#4D148C;color:#fff;font-size:22px;box-shadow:0 6px 18px rgba(0,0,0,.3)
+}
+.pay-btn{background:#28a745}
+</style>
+</head>
+
+<body>
+
+<div class="toggle">
+<button onclick="toggleDark()">🌙</button>
+</div>
+
+<div class="header">
+🌎 GlobeX Logistics ✈️
+<p>Delivering Beyond Borders 🚚📦</p>
+</div>
+
+<div class="container" id="trackPage">
+<h2>Track Shipment 📦</h2>
+<input id="trackInput" placeholder="Enter tracking code">
+<button onclick="track()">Track 🚀</button>
+<div id="result"></div>
+</div>
+
+<div class="container hidden" id="loginPage">
+<h2>Admin Login 🔐</h2>
+<input id="pass" placeholder="Password">
+<button onclick="login()">Login</button>
+</div>
+
+<div class="container hidden" id="adminPage">
+<h2>Admin Panel ⚙️</h2>
+
+<input id="code" placeholder="Tracking Code">
+<input id="from" placeholder="From">
+<input id="to" placeholder="To">
+<input id="date" placeholder="Delivery Date (YYYY-MM-DD)">
+<textarea id="manualHistory" placeholder="Optional manual history (comma separated)"></textarea>
+
+<button onclick="save()">Save</button>
+
+<div id="list"></div>
+</div>
+
+<button class="admin-btn" onclick="openAdmin()">⚙️</button>
+
+<script src="https://js.stripe.com/v3/"></script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, getDocs, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const app = initializeApp({
+apiKey:"AIzaSyBQr2KtnYQWNUmFu_54AUzmM1zMw2las14",
+authDomain:"fedex-tracking-system.firebaseapp.com",
+projectId:"fedex-tracking-system"
+});
+const db = getFirestore(app);
+
+// DARK MODE
+if(localStorage.getItem("dark")==="true") document.body.classList.add("dark");
+window.toggleDark=()=>{
+document.body.classList.toggle("dark");
+localStorage.setItem("dark",document.body.classList.contains("dark"));
+};
+
+// AUTO TRACKING ENGINE (FIXED)
+function autoHistory(deliveryDate){
+const steps=[
+"📦 Package received",
+"✈️ Departed origin",
+"🌎 Arrived destination",
+"🚚 Out for delivery",
+"💳 Ready for delivery payment"
+];
+
+const today=new Date();
+const delivery=new Date(deliveryDate);
+
+// total journey = 5 days simulation
+const totalDays=5;
+const diff=Math.ceil((delivery - today)/(1000*60*60*24));
+
+// progress index
+let index = totalDays - diff;
+if(index < 0) index = 0;
+if(index > steps.length-1) index = steps.length-1;
+
+return steps.slice(0, index+1);
+}
+
+// TRACK
+window.track = async function(){
+const code=document.getElementById("trackInput").value.trim();
+const result=document.getElementById("result");
+
+if(!code){ result.innerHTML="Enter tracking code"; return; }
+
+result.innerHTML="⏳ Loading...";
+
+const snap=await getDoc(doc(db,"shipments",code));
+
+if(!snap.exists()){
+result.innerHTML="❌ Not found";
+return;
+}
+
+const d=snap.data();
+
+// use manual if exists
+const history = (d.manualHistory && d.manualHistory.length)
+? d.manualHistory
+: autoHistory(d.deliveryDate);
+
+let historyHTML="";
+history.forEach(h=>{
+historyHTML+=`<div class="history">${h}</div>`;
+});
+
+const last=history[history.length-1];
+const cleanStatus=last.replace(/[📦✈️🌎🚚💳]/g,"").trim();
+
+const showPay = cleanStatus === "Ready for delivery payment";
+
+result.innerHTML=`
+<h3>${code}</h3>
+<div class="status" style="background:#ff9800">${cleanStatus}</div>
+<p><b>From:</b> ${d.from}</p>
+<p><b>To:</b> ${d.to}</p>
+<div class="timeline">${historyHTML}</div>
+
+${showPay ? `<button class="pay-btn" onclick="pay()">Pay for Delivery 💳</button>` : ""}
+`;
+};
+
+// ADMIN
+window.openAdmin=()=>{
+trackPage.classList.add("hidden");
+loginPage.classList.remove("hidden");
+};
+
+window.login=()=>{
+if(pass.value==="admin123"){
+loginPage.classList.add("hidden");
+adminPage.classList.remove("hidden");
+load();
+}else alert("Wrong password");
+};
+
+window.save=async()=>{
+await setDoc(doc(db,"shipments",code.value),{
+from:from.value,
+to:to.value,
+deliveryDate:date.value,
+manualHistory: manualHistory.value ? manualHistory.value.split(",") : []
+});
+load();
+};
+
+async function load(){
+const snap=await getDocs(collection(db,"shipments"));
+let html="";
+snap.forEach(d=>{
+html+=`<div class="history">${d.id}
+<button onclick="delItem('${d.id}')">Delete</button>
+</div>`;
+});
+list.innerHTML=html;
+}
+
+window.delItem=async(id)=>{
+await deleteDoc(doc(db,"shipments",id));
+load();
+};
+
+// STRIPE
+const stripe = Stripe("YOUR_PUBLIC_KEY");
+
+window.pay=function(){
+stripe.redirectToCheckout({
+lineItems:[{price:"price_xxx",quantity:1}],
+mode:"payment",
+successUrl:window.location.href,
+cancelUrl:window.location.href
+});
+};
+</script>
+
+</body>
+</html>
