@@ -114,7 +114,7 @@ li {
   <h2>Track Your Shipment</h2>
 
   <input id="tracking-input" placeholder="Enter tracking code">
-  <button onclick="track()">Track</button>
+ <button id="track-btn">Track</button>
 
   <div id="result" class="result"></div>
 </div>
@@ -175,7 +175,7 @@ document.getElementById("result").innerHTML =
     alert("Tracking code not found");
   }
 };
-
+document.getElementById("track-btn").addEventListener("click", track);
 </script>
 
 </body>
