@@ -157,7 +157,20 @@ result.innerHTML=`
 <div class="status" style="background:#ff9800">${cleanStatus}</div>
 <p><b>From:</b> ${d.from}</p>
 <p><b>To:</b> ${d.to}</p>
-<div class="timeline">${historyHTML}</div>
+160 <div class="timeline">${historyHTML}</div>
+
+161 <br>
+
+162 <h3>📦 Consignee Details</h3>
+
+163 <div class="history">
+164 👤 <b>${d.receiverName || "Not provided"}</b><br><br>
+165 📍 ${d.receiverAddress || "Not provided"}<br><br>
+166 📧 ${d.receiverEmail || "Not provided"}<br><br>
+167 📞 ${d.receiverPhone || "Not provided"}
+168 </div>
+
+169 ${showPay ? `<button...
 
 ${showPay ? `<button class="pay-btn" onclick="pay()">Pay for Delivery 💳</button>` : ""}
 `;
