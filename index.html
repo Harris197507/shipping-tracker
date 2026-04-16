@@ -4,11 +4,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GlobeX Logistics</title>
 
+<!-- Stripe + PDF + QR -->
+<script src="https://js.stripe.com/v3/"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
 <style>
 body{font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9;transition:.3s}
 .dark{background:#0d1117;color:#fff}
 
-.header{background:linear-gradient(90deg,#4D148C,#FF6600);color:#fff;padding:20px;text-align:center;font-size:22px;font-weight:bold}
+.header{background:linear-gradient(90deg,#4D148C,#FF6600);color:#fff;padding:20px;text-align:center}
 
 .container{max-width:520px;margin:20px auto;background:#fff;padding:20px;border-radius:12px}
 .dark .container{background:#161b22}
@@ -19,28 +24,34 @@ button{width:100%;padding:12px;margin-top:10px;background:#FF6600;color:#fff;bor
 .status{padding:12px;border-radius:10px;margin-top:10px;color:#fff}
 .history{background:#eee;padding:10px;margin-top:8px;border-radius:8px}
 .dark .history{background:#30363d}
-
 .timeline{border-left:4px solid #FF6600;padding-left:10px;margin-top:10px}
 
+.hidden{display:none}
+
 .admin-btn{
-position:fixed;
-bottom:80px;
-right:20px;
-width:55px;
-height:55px;
-border-radius:50%;
-background:#4D148C;
-color:#fff;
-font-size:22px;
+position:fixed;bottom:80px;right:20px;
+width:55px;height:55px;border-radius:50%;
+background:#4D148C;color:#fff;font-size:22px
 }
 
 .toggle{position:fixed;top:10px;right:10px}
-.hidden{display:none}
+
+.watermark{
+position:fixed;
+top:40%;
+left:50%;
+transform:translate(-50%,-50%) rotate(-25deg);
+font-size:60px;
+color:rgba(0,0,0,0.08);
+pointer-events:none;
+}
 .pay-btn{background:#28a745}
 </style>
 </head>
 
 <body>
+
+<div id="watermark" class="watermark">SAMPLE</div>
 
 <div class="toggle">
 <button onclick="toggleDark()">🌙</button>
@@ -74,24 +85,24 @@ font-size:22px;
 <input id="from" placeholder="From">
 <input id="to" placeholder="To">
 <input id="date" placeholder="Delivery Date (YYYY-MM-DD)">
-<textarea id="manualHistory" placeholder="Optional history (comma separated)"></textarea>
+<textarea id="manualHistory" placeholder="History (comma separated)"></textarea>
 
-<h3>Receiver Details</h3>
-<input id="receiverName" placeholder="Receiver Name">
-<input id="receiverAddress" placeholder="Receiver Address">
-<input id="receiverEmail" placeholder="Receiver Email">
-<input id="receiverPhone" placeholder="Receiver Phone">
+<h3>Receiver</h3>
+<input id="receiverName" placeholder="Name">
+<input id="receiverAddress" placeholder="Address">
+<input id="receiverEmail" placeholder="Email">
+<input id="receiverPhone" placeholder="Phone">
 
 <button onclick="save()">Save</button>
-
 <div id="list"></div>
 </div>
 
 <button class="admin-btn" onclick="openAdmin()">⚙️</button>
 
-<script src="https://js.stripe.com/v3/"></script>
+<div id="qrcode" style="display:none;"></div>
 
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, getDocs, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -100,63 +111,36 @@ apiKey:"AIzaSyBQr2KtnYQWNUmFu_54AUzmM1zMw2las14",
 authDomain:"fedex-tracking-system.firebaseapp.com",
 projectId:"fedex-tracking-system"
 });
+
 const db = getFirestore(app);
 
 // DARK MODE
-if(localStorage.getItem("dark")==="true") document.body.classList.add("dark");
-window.toggleDark=()=>{
-document.body.classList.toggle("dark");
-localStorage.setItem("dark",document.body.classList.contains("dark"));
-};
+window.toggleDark=()=>document.body.classList.toggle("dark");
 
-// AUTO TRACKING ENGINE
-function autoHistory(date){
-const steps=[
-"📦 Package received",
-"✈️ Departed origin",
-"🌎 Arrived destination country",
-"🚚 Out for delivery",
-"💳 Ready for delivery payment"
-];
-
-const today=new Date();
-const delivery=new Date(date);
-
-const diff=Math.ceil((delivery - today)/(1000*60*60*24));
-let index=5-diff;
-
-if(index<0) index=0;
-if(index>4) index=4;
-
-return steps.slice(0,index+1);
-}
-
-// TRACK FUNCTION
+// TRACK
 window.track=async()=>{
 let code=trackInput.value.trim();
-if(!code){ result.innerHTML="Enter tracking code"; return; }
-
 let snap=await getDoc(doc(db,"shipments",code));
 
 if(!snap.exists()){
-result.innerHTML="❌ Tracking not found";
+result.innerHTML="❌ Not found";
 return;
 }
 
 let d=snap.data();
 
-let history = d.manualHistory?.length ? d.manualHistory : autoHistory(d.deliveryDate);
+// watermark
+document.getElementById("watermark").innerText = d.paid ? "PAID" : "SAMPLE";
 
 let historyHTML="";
-history.forEach(h=>{
+(d.manualHistory||[]).forEach(h=>{
 historyHTML+=`<div class="history">${h}</div>`;
 });
 
-let last=history[history.length-1].replace(/[📦✈️🌎🚚💳]/g,"").trim();
-let showPay = last==="Ready for delivery payment";
+let last=(d.manualHistory||[]).slice(-1);
 
 result.innerHTML=`
-<h3>📦 ${code}</h3>
+<h3>${code}</h3>
 
 <div class="status" style="background:#ff9800">${last}</div>
 
@@ -167,15 +151,17 @@ result.innerHTML=`
 
 <br>
 
-<h3>📦 Consignee Details</h3>
+<h3>📦 Consignee</h3>
 <div class="history">
-👤 <b>${d.receiverName || "Not provided"}</b><br><br>
-📍 ${d.receiverAddress || "Not provided"}<br><br>
-📧 ${d.receiverEmail || "Not provided"}<br><br>
-📞 ${d.receiverPhone || "Not provided"}
+👤 ${d.receiverName||""}<br>
+📍 ${d.receiverAddress||""}<br>
+📧 ${d.receiverEmail||""}<br>
+📞 ${d.receiverPhone||""}
 </div>
 
-${showPay ? `<button class="pay-btn" onclick="pay()">Pay for Delivery 💳</button>` : ""}
+${!d.paid ? `<button class="pay-btn" onclick="payNow('${code}')">💳 Pay Delivery Fee</button>` : ""}
+
+<button onclick="generatePDF('${code}')">📄 Download PDF</button>
 `;
 };
 
@@ -198,17 +184,17 @@ await setDoc(doc(db,"shipments",code.value),{
 from:from.value,
 to:to.value,
 deliveryDate:date.value,
-manualHistory: manualHistory.value ? manualHistory.value.split(",") : [],
-receiverName: receiverName.value,
-receiverAddress: receiverAddress.value,
-receiverEmail: receiverEmail.value,
-receiverPhone: receiverPhone.value
+manualHistory: manualHistory.value.split(","),
+receiverName:receiverName.value,
+receiverAddress:receiverAddress.value,
+receiverEmail:receiverEmail.value,
+receiverPhone:receiverPhone.value,
+paid:false
 });
-alert("Saved successfully");
+alert("Saved");
 load();
 };
 
-// LOAD DATA
 async function load(){
 const snap=await getDocs(collection(db,"shipments"));
 let html="";
@@ -220,23 +206,69 @@ html+=`<div class="history">${d.id}
 list.innerHTML=html;
 }
 
-// DELETE
 window.delItem=async(id)=>{
 await deleteDoc(doc(db,"shipments",id));
 load();
 };
 
-// PAYMENT (OPTIONAL)
+// STRIPE PAYMENT
 const stripe = Stripe("YOUR_PUBLIC_KEY");
 
-window.pay=()=>{
+window.payNow=(code)=>{
+localStorage.setItem("payCode",code);
 stripe.redirectToCheckout({
 lineItems:[{price:"price_xxx",quantity:1}],
 mode:"payment",
-successUrl:window.location.href,
+successUrl:window.location.href + "?paid=true",
 cancelUrl:window.location.href
 });
 };
+
+// AFTER PAYMENT
+if(window.location.search.includes("paid=true")){
+const code = localStorage.getItem("payCode");
+if(code){
+setDoc(doc(db,"shipments",code),{paid:true},{merge:true});
+}
+}
+
+// PDF GENERATOR (LOGO + QR + STAMP)
+window.generatePDF=function(code){
+const { jsPDF } = window.jspdf;
+const doc = new jsPDF();
+
+doc.setFontSize(18);
+doc.setTextColor(77,20,140);
+doc.text("GLOBEX LOGISTICS",20,20);
+
+doc.setFontSize(12);
+doc.setTextColor(0,0,0);
+doc.text("Tracking Code: "+code,20,35);
+
+doc.text("Status: Delivery Process",20,45);
+
+let y=60;
+document.querySelectorAll(".history").forEach(h=>{
+doc.text(h.innerText,20,y);
+y+=10;
+});
+
+// QR
+const qrContainer=document.getElementById("qrcode");
+qrContainer.innerHTML="";
+new QRCode(qrContainer, code);
+
+setTimeout(()=>{
+const img=qrContainer.querySelector("img").src;
+doc.addImage(img,"PNG",140,30,50,50);
+
+doc.setTextColor(255,0,0);
+doc.text("GLOBEX OFFICIAL STAMP",20,y+20);
+
+doc.save(code+"_receipt.pdf");
+},500);
+};
+
 </script>
 
 </body>
