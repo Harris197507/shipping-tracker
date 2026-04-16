@@ -8,28 +8,34 @@
 body{font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9;transition:.3s}
 .dark{background:#0d1117;color:#fff}
 
-.header{background:linear-gradient(90deg,#4D148C,#FF6600);color:#fff;padding:20px;text-align:center;font-weight:bold;font-size:22px}
-.header p{font-size:13px;margin-top:5px}
+.header{background:linear-gradient(90deg,#4D148C,#FF6600);color:#fff;padding:20px;text-align:center;font-size:22px;font-weight:bold}
 
-.container{max-width:520px;margin:20px auto;background:#fff;padding:20px;border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.1)}
+.container{max-width:520px;margin:20px auto;background:#fff;padding:20px;border-radius:12px}
 .dark .container{background:#161b22}
 
-input,textarea{width:100%;padding:12px;margin-top:8px;border-radius:8px;border:1px solid #ccc}
-button{width:100%;padding:12px;margin-top:10px;background:#FF6600;color:#fff;border:none;border-radius:8px;font-weight:bold;cursor:pointer}
+input,textarea{width:100%;padding:12px;margin-top:10px;border-radius:8px;border:1px solid #ccc}
+button{width:100%;padding:12px;margin-top:10px;background:#FF6600;color:#fff;border:none;border-radius:8px;font-weight:bold}
 
-.status{padding:12px;border-radius:10px;margin-top:10px;color:#fff;font-weight:600}
-.history{background:#eee;padding:12px;margin-top:8px;border-radius:10px}
+.status{padding:12px;border-radius:10px;margin-top:10px;color:#fff}
+.history{background:#eee;padding:10px;margin-top:8px;border-radius:8px}
 .dark .history{background:#30363d}
 
-.timeline{border-left:4px solid #FF6600;padding-left:12px;margin-top:10px}
-.loader{text-align:center;margin-top:20px}
-.hidden{display:none}
+.timeline{border-left:4px solid #FF6600;padding-left:10px;margin-top:10px}
+
+.admin-btn{
+position:fixed;
+bottom:80px;
+right:20px;
+width:55px;
+height:55px;
+border-radius:50%;
+background:#4D148C;
+color:#fff;
+font-size:22px;
+}
 
 .toggle{position:fixed;top:10px;right:10px}
-.admin-btn{
-position:fixed;bottom:80px;right:20px;width:55px;height:55px;border-radius:50%;
-background:#4D148C;color:#fff;font-size:22px;box-shadow:0 6px 18px rgba(0,0,0,.3)
-}
+.hidden{display:none}
 .pay-btn{background:#28a745}
 </style>
 </head>
@@ -41,10 +47,11 @@ background:#4D148C;color:#fff;font-size:22px;box-shadow:0 6px 18px rgba(0,0,0,.3
 </div>
 
 <div class="header">
-🌎 GlobeX Logistics ✈️
-<p>Delivering Beyond Borders 🚚📦</p>
+🌍 GlobeX Logistics ✈️  
+<p>Delivering Beyond Borders 🚚📦⛴️</p>
 </div>
 
+<!-- TRACK -->
 <div class="container" id="trackPage">
 <h2>Track Shipment 📦</h2>
 <input id="trackInput" placeholder="Enter tracking code">
@@ -52,12 +59,14 @@ background:#4D148C;color:#fff;font-size:22px;box-shadow:0 6px 18px rgba(0,0,0,.3
 <div id="result"></div>
 </div>
 
+<!-- LOGIN -->
 <div class="container hidden" id="loginPage">
 <h2>Admin Login 🔐</h2>
 <input id="pass" placeholder="Password">
 <button onclick="login()">Login</button>
 </div>
 
+<!-- ADMIN -->
 <div class="container hidden" id="adminPage">
 <h2>Admin Panel ⚙️</h2>
 
@@ -65,7 +74,13 @@ background:#4D148C;color:#fff;font-size:22px;box-shadow:0 6px 18px rgba(0,0,0,.3
 <input id="from" placeholder="From">
 <input id="to" placeholder="To">
 <input id="date" placeholder="Delivery Date (YYYY-MM-DD)">
-<textarea id="manualHistory" placeholder="Optional manual history (comma separated)"></textarea>
+<textarea id="manualHistory" placeholder="Optional history (comma separated)"></textarea>
+
+<h3>Receiver Details</h3>
+<input id="receiverName" placeholder="Receiver Name">
+<input id="receiverAddress" placeholder="Receiver Address">
+<input id="receiverEmail" placeholder="Receiver Email">
+<input id="receiverPhone" placeholder="Receiver Phone">
 
 <button onclick="save()">Save</button>
 
@@ -94,83 +109,71 @@ document.body.classList.toggle("dark");
 localStorage.setItem("dark",document.body.classList.contains("dark"));
 };
 
-// AUTO TRACKING ENGINE (FIXED)
-function autoHistory(deliveryDate){
+// AUTO TRACKING ENGINE
+function autoHistory(date){
 const steps=[
 "📦 Package received",
 "✈️ Departed origin",
-"🌎 Arrived destination",
+"🌎 Arrived destination country",
 "🚚 Out for delivery",
 "💳 Ready for delivery payment"
 ];
 
 const today=new Date();
-const delivery=new Date(deliveryDate);
+const delivery=new Date(date);
 
-// total journey = 5 days simulation
-const totalDays=5;
 const diff=Math.ceil((delivery - today)/(1000*60*60*24));
+let index=5-diff;
 
-// progress index
-let index = totalDays - diff;
-if(index < 0) index = 0;
-if(index > steps.length-1) index = steps.length-1;
+if(index<0) index=0;
+if(index>4) index=4;
 
-return steps.slice(0, index+1);
+return steps.slice(0,index+1);
 }
 
-// TRACK
-window.track = async function(){
-const code=document.getElementById("trackInput").value.trim();
-const result=document.getElementById("result");
-
+// TRACK FUNCTION
+window.track=async()=>{
+let code=trackInput.value.trim();
 if(!code){ result.innerHTML="Enter tracking code"; return; }
 
-result.innerHTML="⏳ Loading...";
-
-const snap=await getDoc(doc(db,"shipments",code));
+let snap=await getDoc(doc(db,"shipments",code));
 
 if(!snap.exists()){
-result.innerHTML="❌ Not found";
+result.innerHTML="❌ Tracking not found";
 return;
 }
 
-const d=snap.data();
+let d=snap.data();
 
-// use manual if exists
-const history = (d.manualHistory && d.manualHistory.length)
-? d.manualHistory
-: autoHistory(d.deliveryDate);
+let history = d.manualHistory?.length ? d.manualHistory : autoHistory(d.deliveryDate);
 
 let historyHTML="";
 history.forEach(h=>{
 historyHTML+=`<div class="history">${h}</div>`;
 });
 
-const last=history[history.length-1];
-const cleanStatus=last.replace(/[📦✈️🌎🚚💳]/g,"").trim();
-
-const showPay = cleanStatus === "Ready for delivery payment";
+let last=history[history.length-1].replace(/[📦✈️🌎🚚💳]/g,"").trim();
+let showPay = last==="Ready for delivery payment";
 
 result.innerHTML=`
-<h3>${code}</h3>
-<div class="status" style="background:#ff9800">${cleanStatus}</div>
-<p><b>From:</b> ${d.from}</p>
-<p><b>To:</b> ${d.to}</p>
-160 <div class="timeline">${historyHTML}</div>
+<h3>📦 ${code}</h3>
 
-161 <br>
+<div class="status" style="background:#ff9800">${last}</div>
 
-162 <h3>📦 Consignee Details</h3>
+<p><b>🌏 From:</b> ${d.from}</p>
+<p><b>📍 To:</b> ${d.to}</p>
 
-163 <div class="history">
-164 👤 <b>${d.receiverName || "Not provided"}</b><br><br>
-165 📍 ${d.receiverAddress || "Not provided"}<br><br>
-166 📧 ${d.receiverEmail || "Not provided"}<br><br>
-167 📞 ${d.receiverPhone || "Not provided"}
-168 </div>
+<div class="timeline">${historyHTML}</div>
 
-169 ${showPay ? `<button...
+<br>
+
+<h3>📦 Consignee Details</h3>
+<div class="history">
+👤 <b>${d.receiverName || "Not provided"}</b><br><br>
+📍 ${d.receiverAddress || "Not provided"}<br><br>
+📧 ${d.receiverEmail || "Not provided"}<br><br>
+📞 ${d.receiverPhone || "Not provided"}
+</div>
 
 ${showPay ? `<button class="pay-btn" onclick="pay()">Pay for Delivery 💳</button>` : ""}
 `;
@@ -195,11 +198,17 @@ await setDoc(doc(db,"shipments",code.value),{
 from:from.value,
 to:to.value,
 deliveryDate:date.value,
-manualHistory: manualHistory.value ? manualHistory.value.split(",") : []
+manualHistory: manualHistory.value ? manualHistory.value.split(",") : [],
+receiverName: receiverName.value,
+receiverAddress: receiverAddress.value,
+receiverEmail: receiverEmail.value,
+receiverPhone: receiverPhone.value
 });
+alert("Saved successfully");
 load();
 };
 
+// LOAD DATA
 async function load(){
 const snap=await getDocs(collection(db,"shipments"));
 let html="";
@@ -211,15 +220,16 @@ html+=`<div class="history">${d.id}
 list.innerHTML=html;
 }
 
+// DELETE
 window.delItem=async(id)=>{
 await deleteDoc(doc(db,"shipments",id));
 load();
 };
 
-// STRIPE
+// PAYMENT (OPTIONAL)
 const stripe = Stripe("YOUR_PUBLIC_KEY");
 
-window.pay=function(){
+window.pay=()=>{
 stripe.redirectToCheckout({
 lineItems:[{price:"price_xxx",quantity:1}],
 mode:"payment",
