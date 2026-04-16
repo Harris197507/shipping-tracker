@@ -4,77 +4,159 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GlobeX Logistics</title>
 
-<!-- PDF + QR -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
 <style>
-body{font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9}
-.header{background:linear-gradient(90deg,#4D148C,#FF6600);color:#fff;padding:20px;text-align:center}
+body{font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9;transition:.3s}
+.dark{background:#0d1117;color:#fff}
+
+.header{background:linear-gradient(90deg,#4D148C,#FF6600);color:#fff;padding:20px;text-align:center;font-size:22px;font-weight:bold}
+
 .container{max-width:520px;margin:20px auto;background:#fff;padding:20px;border-radius:12px}
-input,textarea{width:100%;padding:12px;margin-top:10px}
-button{width:100%;padding:12px;margin-top:10px;background:#FF6600;color:#fff;border:none;border-radius:8px}
+.dark .container{background:#161b22}
+
+input,textarea{width:100%;padding:12px;margin-top:10px;border-radius:8px;border:1px solid #ccc}
+button{width:100%;padding:12px;margin-top:10px;background:#FF6600;color:#fff;border:none;border-radius:8px;font-weight:bold}
+
 .status{padding:12px;border-radius:10px;margin-top:10px;color:#fff}
 .history{background:#eee;padding:10px;margin-top:8px;border-radius:8px}
+.dark .history{background:#30363d}
+
 .timeline{border-left:4px solid #FF6600;padding-left:10px;margin-top:10px}
+
+.admin-btn{
+position:fixed;
+bottom:80px;
+right:20px;
+width:55px;
+height:55px;
+border-radius:50%;
+background:#4D148C;
+color:#fff;
+font-size:22px;
+}
+
+.toggle{position:fixed;top:10px;right:10px}
 .hidden{display:none}
-.admin-btn{position:fixed;bottom:80px;right:20px;width:55px;height:55px;border-radius:50%;background:#4D148C;color:#fff}
-.watermark{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-25deg);font-size:60px;color:rgba(0,0,0,0.08)}
+.pay-btn{background:#28a745}
 </style>
 </head>
 
 <body>
 
-<div class="watermark">SAMPLE</div>
+<div class="toggle">
+<button onclick="toggleDark()">🌙</button>
+</div>
 
 <div class="header">
 🌍 GlobeX Logistics ✈️  
 <p>Delivering Beyond Borders 🚚📦⛴️</p>
 </div>
 
-<div class="container">
+<!-- TRACK -->
+<div class="container" id="trackPage">
 <h2>Track Shipment 📦</h2>
 <input id="trackInput" placeholder="Enter tracking code">
 <button onclick="track()">Track 🚀</button>
 <div id="result"></div>
 </div>
 
-<div id="qrcode" style="display:none;"></div>
+<!-- LOGIN -->
+<div class="container hidden" id="loginPage">
+<h2>Admin Login 🔐</h2>
+<input id="pass" placeholder="Password">
+<button onclick="login()">Login</button>
+</div>
+
+<!-- ADMIN -->
+<div class="container hidden" id="adminPage">
+<h2>Admin Panel ⚙️</h2>
+
+<input id="code" placeholder="Tracking Code">
+<input id="from" placeholder="From">
+<input id="to" placeholder="To">
+<input id="date" placeholder="Delivery Date (YYYY-MM-DD)">
+<textarea id="manualHistory" placeholder="Optional history (comma separated)"></textarea>
+
+<h3>Receiver Details</h3>
+<input id="receiverName" placeholder="Receiver Name">
+<input id="receiverAddress" placeholder="Receiver Address">
+<input id="receiverEmail" placeholder="Receiver Email">
+<input id="receiverPhone" placeholder="Receiver Phone">
+
+<button onclick="save()">Save</button>
+
+<div id="list"></div>
+</div>
+
+<button class="admin-btn" onclick="openAdmin()">⚙️</button>
+
+<script src="https://js.stripe.com/v3/"></script>
 
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, getDocs, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const app = initializeApp({
 apiKey:"AIzaSyBQr2KtnYQWNUmFu_54AUzmM1zMw2las14",
 authDomain:"fedex-tracking-system.firebaseapp.com",
 projectId:"fedex-tracking-system"
 });
-
 const db = getFirestore(app);
 
-// TRACK
+// DARK MODE
+if(localStorage.getItem("dark")==="true") document.body.classList.add("dark");
+window.toggleDark=()=>{
+document.body.classList.toggle("dark");
+localStorage.setItem("dark",document.body.classList.contains("dark"));
+};
+
+// AUTO TRACKING ENGINE
+function autoHistory(date){
+const steps=[
+"📦 Package received",
+"✈️ Departed origin",
+"🌎 Arrived destination country",
+"🚚 Out for delivery",
+"💳 Ready for delivery payment"
+];
+
+const today=new Date();
+const delivery=new Date(date);
+
+const diff=Math.ceil((delivery - today)/(1000*60*60*24));
+let index=5-diff;
+
+if(index<0) index=0;
+if(index>4) index=4;
+
+return steps.slice(0,index+1);
+}
+
+// TRACK FUNCTION
 window.track=async()=>{
 let code=trackInput.value.trim();
+if(!code){ result.innerHTML="Enter tracking code"; return; }
+
 let snap=await getDoc(doc(db,"shipments",code));
 
 if(!snap.exists()){
-result.innerHTML="❌ Not found";
+result.innerHTML="❌ Tracking not found";
 return;
 }
 
 let d=snap.data();
 
+let history = d.manualHistory?.length ? d.manualHistory : autoHistory(d.deliveryDate);
+
 let historyHTML="";
-(d.manualHistory||[]).forEach(h=>{
+history.forEach(h=>{
 historyHTML+=`<div class="history">${h}</div>`;
 });
 
-let last=(d.manualHistory||[]).slice(-1);
+let last=history[history.length-1].replace(/[📦✈️🌎🚚💳]/g,"").trim();
+let showPay = last==="Ready for delivery payment";
 
 result.innerHTML=`
-<h3>${code}</h3>
+<h3>📦 ${code}</h3>
 
 <div class="status" style="background:#ff9800">${last}</div>
 
@@ -85,53 +167,76 @@ result.innerHTML=`
 
 <br>
 
-<h3>📦 Consignee</h3>
+<h3>📦 Consignee Details</h3>
 <div class="history">
-👤 ${d.receiverName||""}<br>
-📍 ${d.receiverAddress||""}<br>
-📧 ${d.receiverEmail||""}<br>
-📞 ${d.receiverPhone||""}
+👤 <b>${d.receiverName || "Not provided"}</b><br><br>
+📍 ${d.receiverAddress || "Not provided"}<br><br>
+📧 ${d.receiverEmail || "Not provided"}<br><br>
+📞 ${d.receiverPhone || "Not provided"}
 </div>
 
-<button onclick="generatePDF('${code}')">📄 Download PDF</button>
+${showPay ? `<button class="pay-btn" onclick="pay()">Pay for Delivery 💳</button>` : ""}
 `;
 };
 
-// PDF GENERATOR
-window.generatePDF=function(code){
-const { jsPDF } = window.jspdf;
-const doc = new jsPDF();
-
-doc.setFontSize(18);
-doc.setTextColor(77,20,140);
-doc.text("GLOBEX LOGISTICS",20,20);
-
-doc.setFontSize(12);
-doc.setTextColor(0,0,0);
-doc.text("Tracking Code: "+code,20,35);
-
-let y=50;
-document.querySelectorAll(".history").forEach(h=>{
-doc.text(h.innerText,20,y);
-y+=10;
-});
-
-// QR
-const qrContainer=document.getElementById("qrcode");
-qrContainer.innerHTML="";
-new QRCode(qrContainer, code);
-
-setTimeout(()=>{
-const img=qrContainer.querySelector("img").src;
-doc.addImage(img,"PNG",140,30,50,50);
-
-doc.setTextColor(255,0,0);
-doc.text("GLOBEX OFFICIAL STAMP",20,y+20);
-
-doc.save(code+"_receipt.pdf");
-},500);
+// ADMIN
+window.openAdmin=()=>{
+trackPage.classList.add("hidden");
+loginPage.classList.remove("hidden");
 };
 
+window.login=()=>{
+if(pass.value==="admin123"){
+loginPage.classList.add("hidden");
+adminPage.classList.remove("hidden");
+load();
+}else alert("Wrong password");
+};
+
+window.save=async()=>{
+await setDoc(doc(db,"shipments",code.value),{
+from:from.value,
+to:to.value,
+deliveryDate:date.value,
+manualHistory: manualHistory.value ? manualHistory.value.split(",") : [],
+receiverName: receiverName.value,
+receiverAddress: receiverAddress.value,
+receiverEmail: receiverEmail.value,
+receiverPhone: receiverPhone.value
+});
+alert("Saved successfully");
+load();
+};
+
+// LOAD DATA
+async function load(){
+const snap=await getDocs(collection(db,"shipments"));
+let html="";
+snap.forEach(d=>{
+html+=`<div class="history">${d.id}
+<button onclick="delItem('${d.id}')">Delete</button>
+</div>`;
+});
+list.innerHTML=html;
+}
+
+// DELETE
+window.delItem=async(id)=>{
+await deleteDoc(doc(db,"shipments",id));
+load();
+};
+
+// PAYMENT (OPTIONAL)
+const stripe = Stripe("YOUR_PUBLIC_KEY");
+
+window.pay=()=>{
+stripe.redirectToCheckout({
+lineItems:[{price:"price_xxx",quantity:1}],
+mode:"payment",
+successUrl:window.location.href,
+cancelUrl:window.location.href
+});
+};
 </script>
 
 </body>
