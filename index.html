@@ -1,159 +1,156 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Tracking System</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GlobeX Logistics</title>
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
-  <style>
-    body {
-      background:#0b1a2a;
-      color:white;
-      padding:20px;
-      font-family:Arial;
-    }
-
-    input, button {
-      padding:10px;
-      margin:5px;
-      border-radius:8px;
-      border:none;
-    }
-
-    #map {
-      height:300px;
-      margin-top:20px;
-    }
-
-    .box {
-      background:#1c2e40;
-      padding:10px;
-      margin-top:10px;
-      border-radius:8px;
-    }
-  </style>
+<style>
+body{font-family:'Segoe UI',sans-serif;margin:0;background:#0d1117;color:#fff}
+.header{background:linear-gradient(90deg,#4D148C,#FF6600);padding:20px;text-align:center;font-size:22px;font-weight:bold}
+.container{max-width:520px;margin:20px auto;background:#161b22;padding:20px;border-radius:12px}
+input{width:100%;padding:12px;margin-top:10px;border-radius:8px;border:none;background:#30363d;color:#fff}
+button{width:100%;padding:12px;margin-top:10px;background:#FF6600;color:#fff;border:none;border-radius:8px;font-weight:bold}
+.status{padding:12px;border-radius:10px;margin-top:10px;background:#1c2e40}
+.history{background:#30363d;padding:10px;margin-top:8px;border-radius:8px}
+#map{height:250px;margin-top:15px;border-radius:10px}
+.admin-btn{position:fixed;bottom:20px;right:20px;width:55px;height:55px;border-radius:50%;background:#4D148C;color:#fff;font-size:22px}
+.hidden{display:none}
+</style>
 </head>
 
 <body>
 
-<h2>📦 Live Tracking</h2>
+<div class="header">
+🌍 GlobeX Logistics ✈️
+<p>Delivering Beyond Borders 🚚📦</p>
+</div>
 
-<input id="tracking" placeholder="Tracking ID">
-<button onclick="track()">Track</button>
-
-<div id="status"></div>
+<div class="container" id="trackPage">
+<h2>Track Shipment 📦</h2>
+<input id="trackInput" placeholder="Enter tracking code">
+<button onclick="track()">Track 🚀</button>
+<div id="result"></div>
 <div id="map"></div>
+</div>
 
-<h3>🔐 Admin</h3>
-<input id="adminId" placeholder="Tracking ID">
-<input id="lat" placeholder="Lat">
-<input id="lng" placeholder="Lng">
-<button onclick="addRoute()">Add</button>
+<div class="container hidden" id="loginPage">
+<h2>Admin Login 🔐</h2>
+<input id="pass" placeholder="Password">
+<button onclick="login()">Login</button>
+</div>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<div class="container hidden" id="adminPage">
+<h2>Admin Panel ⚙️</h2>
+<input id="code" placeholder="Tracking Code">
+<input id="from" placeholder="From">
+<input id="to" placeholder="To">
+<input id="date" placeholder="Delivery Date YYYY-MM-DD">
+<button onclick="save()">Save</button>
+<div id="list"></div>
+</div>
 
-<!-- Leaflet -->
+<button class="admin-btn" onclick="openAdmin()">⚙️</button>
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// ✅ YOUR FIREBASE CONFIG (ALREADY INSERTED)
-const firebaseConfig = {
-  apiKey: "AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
-  authDomain: "globaltrackingsystem-f14c2.firebaseapp.com",
-  projectId: "globaltrackingsystem-f14c2",
-  storageBucket: "globaltrackingsystem-f14c2.firebasestorage.app",
-  messagingSenderId: "199571170052",
-  appId: "1:199571170052:web:d8bf1b09c17016979f6651",
-  measurementId: "G-RTR48KS8G7"
-};
+const app = initializeApp({
+apiKey:"AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
+authDomain:"globaltrackingsystem-f14c2.firebaseapp.com",
+projectId:"globaltrackingsystem-f14c2"
+});
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const db = getFirestore(app);
 
 let map, marker, line;
 
-// 🔍 TRACK
-function track() {
-  const id = document.getElementById("tracking").value;
+window.track = async ()=>{
+let code = document.getElementById("trackInput").value.trim();
+if(!code){ result.innerHTML="Enter tracking code"; return; }
 
-  db.collection("shipments").doc(id).get().then(doc => {
-    if (!doc.exists) {
-      alert("Tracking not found");
-      return;
-    }
+let snap = await getDoc(doc(db,"shipments",code));
+if(!snap.exists()){ result.innerHTML="❌ Not found"; return; }
 
-    const data = doc.data();
+let d = snap.data();
 
-    document.getElementById("status").innerHTML = `
-      <div class="box">📦 Created</div>
-      <div class="box">🚚 Picked up</div>
-      <div class="box">📍 In transit</div>
-      <div class="box">ETA: ${data.eta || "Updating..."}</div>
-    `;
+result.innerHTML = `
+<h3>${code}</h3>
+<div class="status">📦 In Transit</div>
+<p><b>From:</b> ${d.from}</p>
+<p><b>To:</b> ${d.to}</p>
+`;
 
-    drawMap(data.route);
-  });
+loadMap(d.route);
+};
+
+function loadMap(route){
+if(!route || route.length < 2){ return; }
+
+let coords = route.map(p=>[p.lat,p.lng]);
+
+if(!map){
+map = L.map('map').setView(coords[0],5);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 }
 
-// 🗺 MAP
-function drawMap(route) {
-  if (!route || route.length === 0) return;
+if(line) map.removeLayer(line);
+if(marker) map.removeLayer(marker);
 
-  const coords = route.map(p => [p.lat, p.lng]);
+line = L.polyline(coords,{color:'orange'}).addTo(map);
+marker = L.marker(coords[0]).addTo(map);
 
-  if (!map) {
-    map = L.map('map').setView(coords[0], 5);
+map.fitBounds(line.getBounds());
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-  }
-
-  if (line) map.removeLayer(line);
-  if (marker) map.removeLayer(marker);
-
-  line = L.polyline(coords, {color:'lime'}).addTo(map);
-  marker = L.marker(coords[0]).addTo(map);
-
-  let i = 0;
-
-  setInterval(() => {
-    if (i < coords.length) {
-      marker.setLatLng(coords[i]);
-      map.panTo(coords[i]);
-      i++;
-    }
-  }, 2000);
+let i=0;
+setInterval(()=>{
+i++;
+if(i>=coords.length) i=0;
+marker.setLatLng(coords[i]);
+},2000);
 }
 
-// 🔐 ADMIN ADD ROUTE
-function addRoute() {
-  const id = document.getElementById("adminId").value;
-  const lat = Number(document.getElementById("lat").value);
-  const lng = Number(document.getElementById("lng").value);
+window.openAdmin=()=>{
+trackPage.classList.add("hidden");
+loginPage.classList.remove("hidden");
+};
 
-  const ref = db.collection("shipments").doc(id);
+window.login=()=>{
+if(pass.value==="admin123"){
+loginPage.classList.add("hidden");
+adminPage.classList.remove("hidden");
+load();
+}else alert("Wrong password");
+};
 
-  ref.get().then(doc => {
-    let route = [];
+window.save=async()=>{
+await setDoc(doc(db,"shipments",code.value),{
+from:from.value,
+to:to.value,
+deliveryDate:date.value,
+route:[
+{lat:26,lng:119},
+{lat:22,lng:121},
+{lat:18,lng:122},
+{lat:14,lng:121}
+]
+});
+alert("Saved ✅");
+load();
+};
 
-    if (doc.exists) route = doc.data().route || [];
-
-    route.push({ lat, lng });
-
-    ref.set({
-      route: route,
-      status: 2,
-      eta: "Updating..."
-    });
-
-    alert("Added ✅");
-  });
+async function load(){
+const snap = await getDocs(collection(db,"shipments"));
+let html="";
+snap.forEach(d=>{
+html+=`<div class="history">${d.id}</div>`;
+});
+list.innerHTML = html;
 }
-
 </script>
 
 </body>
