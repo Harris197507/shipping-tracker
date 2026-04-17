@@ -13,10 +13,10 @@ body{font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9;transition:.3
 .container{max-width:520px;margin:20px auto;background:#fff;padding:20px;border-radius:12px}
 .dark .container{background:#161b22}
 
-input,textarea{width:100%;padding:12px;margin-top:10px;border-radius:8px;border:1px solid #ccc}
+input,textarea,select{width:100%;padding:12px;margin-top:10px;border-radius:8px;border:1px solid #ccc}
 button{width:100%;padding:12px;margin-top:10px;background:#FF6600;color:#fff;border:none;border-radius:8px;font-weight:bold}
 
-.status{padding:12px;border-radius:10px;margin-top:10px;color:#fff}
+.status{padding:12px;border-radius:10px;margin-top:10px;color:#fff;text-align:center;font-weight:bold}
 .history{background:#eee;padding:10px;margin-top:8px;border-radius:8px}
 .dark .history{background:#30363d}
 
@@ -26,8 +26,7 @@ button{width:100%;padding:12px;margin-top:10px;background:#FF6600;color:#fff;bor
 position:fixed;
 bottom:80px;
 right:20px;
-width:55px;
-height:55px;
+width:55px;height:55px;
 border-radius:50%;
 background:#4D148C;
 color:#fff;
@@ -73,7 +72,15 @@ font-size:22px;
 <input id="from" placeholder="From">
 <input id="to" placeholder="To">
 <input id="date" placeholder="Delivery Date (YYYY-MM-DD)">
-<textarea id="manualHistory" placeholder="Optional history (comma separated)"></textarea>
+
+<select id="status">
+<option value="In transit">In transit</option>
+<option value="Out for delivery">Out for delivery</option>
+<option value="Delivered">Delivered</option>
+<option value="Delayed">Delayed</option>
+</select>
+
+<textarea id="manualHistory" placeholder="Comma separated timeline"></textarea>
 
 <h3>Receiver Details</h3>
 <input id="receiverName" placeholder="Receiver Name">
@@ -82,7 +89,6 @@ font-size:22px;
 <input id="receiverPhone" placeholder="Receiver Phone">
 
 <button onclick="save()">Save</button>
-
 <div id="list"></div>
 </div>
 
@@ -106,54 +112,35 @@ document.body.classList.toggle("dark");
 localStorage.setItem("dark",document.body.classList.contains("dark"));
 };
 
-// AUTO TRACKING
-function autoHistory(date){
-const steps=[
-"📦 Package received",
-"✈️ Departed origin",
-"🌎 Arrived destination country",
-"🚚 Out for delivery"
-];
-
-const today=new Date();
-const delivery=new Date(date);
-
-const diff=Math.ceil((delivery - today)/(1000*60*60*24));
-let index=4-diff;
-
-if(index<0) index=0;
-if(index>3) index=3;
-
-return steps.slice(0,index+1);
-}
-
 // TRACK
 window.track=async()=>{
 let code=trackInput.value.trim();
 if(!code){ result.innerHTML="Enter tracking code"; return; }
 
 let snap=await getDoc(doc(db,"shipments",code));
-
 if(!snap.exists()){
 result.innerHTML="❌ Tracking not found";
 return;
 }
 
 let d=snap.data();
-
-let history = d.manualHistory?.length ? d.manualHistory : autoHistory(d.deliveryDate);
+let history = d.manualHistory?.length ? d.manualHistory : [];
 
 let historyHTML="";
 history.forEach(h=>{
 historyHTML+=`<div class="history">${h}</div>`;
 });
 
-let last=history[history.length-1];
+// STATUS COLOR
+let color="#ff9800";
+if(d.status==="Delivered") color="#28a745";
+if(d.status==="Delayed") color="#dc3545";
+if(d.status==="Out for delivery") color="#007bff";
 
 result.innerHTML=`
 <h3>📦 ${code}</h3>
 
-<div class="status" style="background:#ff9800">${last}</div>
+<div class="status" style="background:${color}">${d.status}</div>
 
 <p><b>🌏 From:</b> ${d.from}</p>
 <p><b>📍 To:</b> ${d.to}</p>
@@ -191,6 +178,7 @@ await setDoc(doc(db,"shipments",code.value),{
 from:from.value,
 to:to.value,
 deliveryDate:date.value,
+status:status.value,
 manualHistory: manualHistory.value ? manualHistory.value.split(",") : [],
 receiverName: receiverName.value,
 receiverAddress: receiverAddress.value,
@@ -218,7 +206,6 @@ window.delItem=async(id)=>{
 await deleteDoc(doc(db,"shipments",id));
 load();
 };
-
 </script>
 
 </body>
