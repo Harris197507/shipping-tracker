@@ -325,7 +325,7 @@ try {
 await setDoc(doc(db,"shipments",code.value.trim()),{
 from: from.value.trim(),
 to: to.value.trim(),
-status: status.value,
+status: document.getElementById("status").value,
 manualHistory: history.value ? history.value.split(",") : [],
 receiverName: receiverName.value.trim(),
 receiverAddress: receiverAddress.value.trim(),
