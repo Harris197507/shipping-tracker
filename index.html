@@ -4,100 +4,47 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GlobeX Logistics</title>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
 <style>
-body{margin:0;font-family:Segoe UI;background:#eef1f5;}
-
-.header{
-background:linear-gradient(90deg,#6a11cb,#ff6600);
-color:#fff;
-text-align:center;
-padding:20px;
-}
-
-.container{
-max-width:520px;
-margin:15px auto;
-background:#fff;
-padding:20px;
-border-radius:20px;
-}
-
-input{
-width:100%;
-padding:14px;
-margin-top:10px;
-border-radius:12px;
-border:1px solid #ddd;
-}
-
-button{
-width:100%;
-padding:14px;
-margin-top:15px;
-border:none;
-border-radius:12px;
-background:#ff6600;
-color:#fff;
-font-weight:bold;
-}
-
-.card{
-background:#f5f6f8;
-padding:15px;
-margin-top:10px;
-border-radius:15px;
-}
-
-.admin-btn{
-position:fixed;
-bottom:25px;
-right:25px;
-width:60px;
-height:60px;
-border-radius:50%;
-background:#6a11cb;
-color:#fff;
-font-size:24px;
-border:none;
-}
-
+body{font-family:Segoe UI;margin:0;background:#0d1117;color:#fff}
+.header{background:linear-gradient(90deg,#4D148C,#FF6600);padding:18px;text-align:center;font-size:20px;font-weight:bold}
+.container{max-width:500px;margin:20px auto;padding:20px;background:#161b22;border-radius:12px}
+input,textarea{width:100%;padding:12px;margin-top:10px;border-radius:8px;border:none}
+button{width:100%;padding:12px;margin-top:10px;background:#FF6600;color:#fff;border:none;border-radius:8px;font-weight:bold}
+.status{background:#FF6600;padding:10px;border-radius:8px;margin-top:10px}
+.history{background:#30363d;padding:10px;margin-top:6px;border-radius:6px}
+.admin-btn{position:fixed;bottom:20px;right:20px;background:#4D148C;color:#fff;border-radius:50%;width:60px;height:60px;font-size:22px}
 .hidden{display:none}
 </style>
 </head>
 
 <body>
 
-<div class="header">
-🌍 GlobeX Logistics 🚚📦
-</div>
+<div class="header">🌍 GlobeX Logistics 📦</div>
 
 <div class="container" id="trackPage">
-<input id="trackInput" placeholder="Enter tracking code">
+<h3>Track Shipment</h3>
+<input id="trackInput" placeholder="Tracking code">
 <button onclick="track()">Track</button>
 <div id="result"></div>
 </div>
 
 <div class="container hidden" id="loginPage">
-<input id="password" placeholder="Admin password">
+<h3>Admin Login</h3>
+<input id="pass" placeholder="Password">
 <button onclick="login()">Login</button>
 </div>
 
 <div class="container hidden" id="adminPage">
-<h2>Admin Panel ⚙️</h2>
+<h3>Admin Panel</h3>
 
 <input id="code" placeholder="Tracking Code">
 <input id="from" placeholder="From">
 <input id="to" placeholder="To">
-<input id="date" placeholder="Delivery Date">
+<input id="date" placeholder="Delivery Date YYYY-MM-DD">
 
-<input id="history" placeholder="Status (comma separated)">
-
-<input id="name" placeholder="Customer Name">
+<h4>Customer Details</h4>
+<input id="name" placeholder="Receiver Name">
 <input id="address" placeholder="Address">
-<input id="phone" placeholder="Phone">
 
 <button onclick="save()">Save</button>
 
@@ -106,100 +53,115 @@ border:none;
 
 <button class="admin-btn" onclick="openAdmin()">⚙️</button>
 
-<script>
+<!-- FIREBASE (SAFE VERSION) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-firebase.initializeApp({
+<script>
+const firebaseConfig = {
 apiKey: "AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
 authDomain: "globaltrackingsystem-f14c2.firebaseapp.com",
 projectId: "globaltrackingsystem-f14c2"
-});
+};
 
+firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* LOGIN */
+function autoHistory(){
+return [
+"📦 Package received",
+"✈️ In transit",
+"🚚 Out for delivery"
+];
+}
+
+// TRACK
+async function track(){
+let code = document.getElementById("trackInput").value.trim();
+if(!code) return;
+
+let docRef = await db.collection("shipments").doc(code).get();
+
+if(!docRef.exists){
+document.getElementById("result").innerHTML="Not found";
+return;
+}
+
+let d = docRef.data();
+let history = autoHistory();
+
+let html="";
+history.forEach(h=>{
+html+=`<div class="history">${h}</div>`;
+});
+
+document.getElementById("result").innerHTML=`
+<div class="status">${history[history.length-1]}</div>
+<p><b>From:</b> ${d.from}</p>
+<p><b>To:</b> ${d.to}</p>
+
+<h4>Receiver</h4>
+<div class="history">
+${d.name}<br>
+${d.address}
+</div>
+
+${html}
+`;
+}
+
+// ADMIN
 function openAdmin(){
-trackPage.classList.add("hidden");
-loginPage.classList.remove("hidden");
+document.getElementById("trackPage").classList.add("hidden");
+document.getElementById("loginPage").classList.remove("hidden");
 }
 
 function login(){
-if(password.value==="admin123"){
-loginPage.classList.add("hidden");
-adminPage.classList.remove("hidden");
+if(document.getElementById("pass").value==="admin123"){
+document.getElementById("loginPage").classList.add("hidden");
+document.getElementById("adminPage").classList.remove("hidden");
 load();
-}else{
-alert("Wrong password");
-}
+}else alert("Wrong password");
 }
 
-/* SAVE */
-function save(){
-db.collection("shipments").doc(code.value).set({
-from:from.value,
-to:to.value,
-date:date.value,
-history:history.value.split(","),
-name:name.value,
-address:address.value,
-phone:phone.value
+// SAVE
+async function save(){
+let code=document.getElementById("code").value;
+
+await db.collection("shipments").doc(code).set({
+from:document.getElementById("from").value,
+to:document.getElementById("to").value,
+date:document.getElementById("date").value,
+name:document.getElementById("name").value,
+address:document.getElementById("address").value
 });
 
 alert("Saved");
 load();
 }
 
-/* LOAD */
-function load(){
-db.collection("shipments").get().then(snap=>{
+// LOAD
+async function load(){
+let snap = await db.collection("shipments").get();
 let html="";
-snap.forEach(doc=>{
+
+snap.forEach(d=>{
 html+=`
-<div class="card">
-${doc.id}
-<button onclick="del('${doc.id}')">Delete</button>
-</div>`;
-});
-list.innerHTML=html;
-});
-}
-
-/* DELETE */
-function del(id){
-db.collection("shipments").doc(id).delete().then(load);
-}
-
-/* TRACK */
-function track(){
-db.collection("shipments").doc(trackInput.value).get().then(doc=>{
-if(!doc.exists){
-result.innerHTML="❌ Not found";
-return;
-}
-
-let d=doc.data();
-
-let h="";
-d.history.forEach(i=>{
-h+=`<div class="card">${i}</div>`;
-});
-
-result.innerHTML=`
-<h3>${trackInput.value}</h3>
-
-<p><b>From:</b> ${d.from}</p>
-<p><b>To:</b> ${d.to}</p>
-
-${h}
-
-<div class="card">
-${d.name}<br>
-${d.address}<br>
-${d.phone}
+<div class="history">
+${d.id}
+<button onclick="del('${d.id}')">Delete</button>
 </div>
 `;
 });
+
+document.getElementById("list").innerHTML=html;
 }
 
+// DELETE
+async function del(id){
+await db.collection("shipments").doc(id).delete();
+load();
+}
 </script>
 
 </body>
