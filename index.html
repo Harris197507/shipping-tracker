@@ -1,130 +1,202 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Premium Tracking (Free Map)</title>
+  <title>Premium Tracking System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
-<style>
-body { background:#0b1220; color:white; font-family:Segoe UI; }
-.container { padding:20px; }
-.card { background:#111827; padding:15px; border-radius:12px; margin-bottom:15px; }
-#map { height:350px; border-radius:12px; }
-.msg { background:#1e293b; padding:10px; margin:5px; border-radius:8px; }
-button { padding:10px; background:#22c55e; border:none; color:white; }
-input { padding:10px; width:60%; }
-</style>
+  <style>
+    body {
+      background: #0b1a2a;
+      color: white;
+      font-family: Arial;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    input {
+      width: 60%;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      margin: 5px;
+    }
+
+    button {
+      padding: 10px 15px;
+      background: green;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      margin: 5px;
+    }
+
+    #map {
+      height: 300px;
+      margin-top: 20px;
+      border-radius: 10px;
+    }
+
+    .card {
+      background: #1c2e40;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 8px;
+    }
+
+    .admin {
+      margin-top: 30px;
+      padding: 15px;
+      border: 1px solid #333;
+      border-radius: 10px;
+    }
+  </style>
 </head>
 
 <body>
 
-<div class="container">
+<h2>📦 Premium Live Tracking</h2>
 
-<div class="card">
-<input id="trackId" placeholder="Tracking ID">
+<!-- TRACKING -->
+<input id="tracking" placeholder="Enter tracking code">
 <button onclick="track()">Track</button>
-</div>
 
-<div class="card">
-<div id="chat"></div>
-<div id="eta"></div>
-</div>
-
-<div class="card">
+<div id="result"></div>
 <div id="map"></div>
+
+<!-- ADMIN PANEL -->
+<div class="admin">
+  <h3>🔐 Admin Panel</h3>
+
+  <input id="adminId" placeholder="Tracking ID"><br>
+  <input id="lat" placeholder="Latitude">
+  <input id="lng" placeholder="Longitude"><br>
+
+  <button onclick="addRoute()">Add Location</button>
 </div>
 
-</div>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<!-- Leaflet -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-let map, marker;
+/* 🔥 REPLACE THIS WITH YOUR FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT",
+};
 
-// SAMPLE DATA (you can replace with Firebase later)
-const demoRoute = [
-  {lat:26, lng:119},
-  {lat:20, lng:120},
-  {lat:14, lng:121}
-];
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-function track(){
-  drawMap(demoRoute);
-  animate(demoRoute);
-  showMessages(3);
-  startETA(demoRoute);
-}
+/* MAP */
+let map;
+let marker;
+let polyline;
 
-// 🗺️ MAP
-function drawMap(route){
-  map = L.map('map').setView([route[0].lat, route[0].lng], 5);
+/* TRACK FUNCTION */
+function track() {
+  const id = document.getElementById("tracking").value;
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
-    .addTo(map);
-
-  marker = L.marker([route[0].lat, route[0].lng]).addTo(map);
-}
-
-// 🚚 SMOOTH MOVE
-function animate(route){
-  let i=0;
-
-  function move(){
-    if(i>=route.length-1) return;
-
-    let start = route[i];
-    let end = route[i+1];
-
-    let step=0;
-
-    let interval = setInterval(()=>{
-      step += 0.02;
-
-      let lat = start.lat + (end.lat-start.lat)*step;
-      let lng = start.lng + (end.lng-start.lng)*step;
-
-      marker.setLatLng([lat,lng]);
-
-      if(step>=1){
-        clearInterval(interval);
-        i++;
-        move();
-      }
-    },50);
-  }
-
-  move();
-}
-
-// 💬 STATUS
-function showMessages(status){
-  chat.innerHTML="";
-  const msgs = ["Created","Picked up","In transit","Customs","Out for delivery","Delivered"];
-
-  for(let i=0;i<status;i++){
-    let div=document.createElement("div");
-    div.className="msg";
-    div.innerText=msgs[i];
-    chat.appendChild(div);
-  }
-}
-
-// ⏱ ETA
-function startETA(route){
-  let time = route.length * 20;
-
-  function update(){
-    eta.innerText = "ETA: " + time + "s";
-
-    if(time>0){
-      time--;
-      setTimeout(update,1000);
-    }else{
-      eta.innerText="Arrived";
+  db.collection("shipments").doc(id).get().then(doc => {
+    if (!doc.exists) {
+      alert("Tracking not found");
+      return;
     }
+
+    const data = doc.data();
+
+    document.getElementById("result").innerHTML = `
+      <div class="card">📦 Created</div>
+      <div class="card">🚚 Picked up</div>
+      <div class="card">📍 In transit</div>
+      <div class="card">⏱ ETA: ${data.eta || "Updating..."}</div>
+    `;
+
+    drawMap(data.route);
+  });
+}
+
+/* DRAW MAP */
+function drawMap(route) {
+  if (!route || route.length === 0) {
+    alert("No route data");
+    return;
   }
 
-  update();
+  const latlngs = route.map(p => [p.lat, p.lng]);
+
+  if (!map) {
+    map = L.map('map').setView(latlngs[0], 5);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: ''
+    }).addTo(map);
+  }
+
+  if (polyline) map.removeLayer(polyline);
+
+  polyline = L.polyline(latlngs, {color: 'lime'}).addTo(map);
+
+  if (marker) map.removeLayer(marker);
+
+  marker = L.marker(latlngs[0]).addTo(map);
+
+  animateTruck(latlngs);
+}
+
+/* 🚚 SMOOTH TRUCK MOVEMENT */
+function animateTruck(points) {
+  let i = 0;
+
+  setInterval(() => {
+    if (i < points.length) {
+      marker.setLatLng(points[i]);
+      map.panTo(points[i]);
+      i++;
+    }
+  }, 2000);
+}
+
+/* ADMIN ADD ROUTE */
+function addRoute() {
+  const id = document.getElementById("adminId").value;
+  const lat = Number(document.getElementById("lat").value);
+  const lng = Number(document.getElementById("lng").value);
+
+  if (!id || !lat || !lng) {
+    alert("Fill all fields");
+    return;
+  }
+
+  const ref = db.collection("shipments").doc(id);
+
+  ref.get().then(doc => {
+    let route = [];
+
+    if (doc.exists) {
+      route = doc.data().route || [];
+    }
+
+    route.push({ lat, lng });
+
+    ref.set({
+      route: route,
+      status: 2,
+      eta: "Updating..."
+    });
+
+    alert("Location added ✅");
+  });
 }
 </script>
 
