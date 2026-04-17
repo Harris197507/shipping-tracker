@@ -1,202 +1,89 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Premium Tracking System</title>
+  <title>Tracking</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
   <style>
-    body {
-      background: #0b1a2a;
-      color: white;
-      font-family: Arial;
-      padding: 20px;
-    }
-
-    h2 {
-      text-align: center;
-    }
-
-    input {
-      width: 60%;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
-      margin: 5px;
-    }
-
-    button {
-      padding: 10px 15px;
-      background: green;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      margin: 5px;
-    }
-
-    #map {
-      height: 300px;
-      margin-top: 20px;
-      border-radius: 10px;
-    }
-
-    .card {
-      background: #1c2e40;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 8px;
-    }
-
-    .admin {
-      margin-top: 30px;
-      padding: 15px;
-      border: 1px solid #333;
-      border-radius: 10px;
-    }
+    body { background:#0b1a2a; color:white; padding:20px; font-family:Arial; }
+    input, button { padding:10px; margin:5px; border-radius:8px; border:none; }
+    #map { height:300px; margin-top:20px; }
   </style>
 </head>
 
 <body>
 
-<h2>📦 Premium Live Tracking</h2>
+<h2>📦 Tracking</h2>
 
-<!-- TRACKING -->
-<input id="tracking" placeholder="Enter tracking code">
+<input id="tracking" placeholder="Tracking ID">
 <button onclick="track()">Track</button>
 
-<div id="result"></div>
+<div id="status"></div>
 <div id="map"></div>
 
-<!-- ADMIN PANEL -->
-<div class="admin">
-  <h3>🔐 Admin Panel</h3>
+<!-- Firebase SAFE VERSION -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-  <input id="adminId" placeholder="Tracking ID"><br>
-  <input id="lat" placeholder="Latitude">
-  <input id="lng" placeholder="Longitude"><br>
-
-  <button onclick="addRoute()">Add Location</button>
-</div>
-
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-
-<!-- Leaflet -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-/* 🔥 REPLACE THIS WITH YOUR FIREBASE CONFIG */
+try {
+
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT",
+  apiKey: "PASTE_REAL_KEY",
+  authDomain: "PASTE.firebaseapp.com",
+  projectId: "PASTE_PROJECT_ID",
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* MAP */
 let map;
-let marker;
-let polyline;
 
-/* TRACK FUNCTION */
 function track() {
   const id = document.getElementById("tracking").value;
 
   db.collection("shipments").doc(id).get().then(doc => {
+
     if (!doc.exists) {
-      alert("Tracking not found");
+      alert("Not found");
       return;
     }
 
     const data = doc.data();
 
-    document.getElementById("result").innerHTML = `
-      <div class="card">📦 Created</div>
-      <div class="card">🚚 Picked up</div>
-      <div class="card">📍 In transit</div>
-      <div class="card">⏱ ETA: ${data.eta || "Updating..."}</div>
-    `;
+    document.getElementById("status").innerHTML =
+      "📦 In transit | ETA: " + (data.eta || "...");
 
     drawMap(data.route);
+
+  }).catch(err => {
+    alert("Firebase error: " + err.message);
   });
 }
 
-/* DRAW MAP */
 function drawMap(route) {
-  if (!route || route.length === 0) {
-    alert("No route data");
-    return;
-  }
+  if (!route || route.length === 0) return;
 
-  const latlngs = route.map(p => [p.lat, p.lng]);
+  const first = route[0];
 
   if (!map) {
-    map = L.map('map').setView(latlngs[0], 5);
+    map = L.map('map').setView([first.lat, first.lng], 5);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: ''
-    }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
   }
 
-  if (polyline) map.removeLayer(polyline);
+  const points = route.map(p => [p.lat, p.lng]);
 
-  polyline = L.polyline(latlngs, {color: 'lime'}).addTo(map);
-
-  if (marker) map.removeLayer(marker);
-
-  marker = L.marker(latlngs[0]).addTo(map);
-
-  animateTruck(latlngs);
+  L.polyline(points).addTo(map);
+  L.marker(points[0]).addTo(map);
 }
 
-/* 🚚 SMOOTH TRUCK MOVEMENT */
-function animateTruck(points) {
-  let i = 0;
-
-  setInterval(() => {
-    if (i < points.length) {
-      marker.setLatLng(points[i]);
-      map.panTo(points[i]);
-      i++;
-    }
-  }, 2000);
-}
-
-/* ADMIN ADD ROUTE */
-function addRoute() {
-  const id = document.getElementById("adminId").value;
-  const lat = Number(document.getElementById("lat").value);
-  const lng = Number(document.getElementById("lng").value);
-
-  if (!id || !lat || !lng) {
-    alert("Fill all fields");
-    return;
-  }
-
-  const ref = db.collection("shipments").doc(id);
-
-  ref.get().then(doc => {
-    let route = [];
-
-    if (doc.exists) {
-      route = doc.data().route || [];
-    }
-
-    route.push({ lat, lng });
-
-    ref.set({
-      route: route,
-      status: 2,
-      eta: "Updating..."
-    });
-
-    alert("Location added ✅");
-  });
+} catch(e) {
+  document.body.innerHTML = "<h2 style='color:red'>ERROR: "+e.message+"</h2>";
 }
 </script>
 
