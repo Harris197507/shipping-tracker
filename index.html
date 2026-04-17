@@ -1,277 +1,212 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GlobeX Logistics</title>
+<meta charset="UTF-8">
+<title>Premium Tracking System</title>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY"></script>
 
 <style>
-body{margin:0;font-family:'Segoe UI',sans-serif;background:#f4f6f9}
+body { margin:0; font-family:Segoe UI; background:#0b1220; color:white; }
 
-/* HEADER */
-.header{
-background:linear-gradient(90deg,#4D148C,#FF6600);
-color:#fff;
-padding:25px;
-text-align:center
-}
-.header h2{margin:0}
-.header p{margin:5px 0 0}
-
-/* CONTAINER */
-.container{max-width:1000px;margin:20px auto;padding:15px}
-
-/* CARD */
-.card{
-background:#fff;
-padding:18px;
-border-radius:12px;
-margin-bottom:15px;
-box-shadow:0 4px 12px rgba(0,0,0,0.08)
+.header {
+  padding:20px;
+  text-align:center;
+  font-size:22px;
+  background:#111827;
 }
 
-/* GRID */
-.grid{display:flex;gap:15px;flex-wrap:wrap}
-.left{flex:2}
-.right{flex:1}
+.container { padding:20px; }
 
-/* TIMELINE */
-.timeline{border-left:4px solid #FF6600;padding-left:12px}
-.item{margin-bottom:12px}
-
-/* STATUS */
-.status{
-padding:12px;
-border-radius:8px;
-text-align:center;
-font-weight:bold;
-color:#fff
-}
-.intransit{background:#007bff}
-.hold{background:#dc3545}
-.delivered{background:#28a745}
-
-/* INPUT */
-input,textarea{
-width:100%;
-padding:12px;
-margin-bottom:10px;
-border-radius:8px;
-border:1px solid #ccc
+.card {
+  background:rgba(255,255,255,0.05);
+  padding:15px;
+  border-radius:12px;
+  margin-bottom:15px;
 }
 
-/* BUTTON */
-button{
-width:100%;
-padding:12px;
-background:#FF6600;
-color:#fff;
-border:none;
-border-radius:8px;
-font-weight:bold
-}
+input { padding:12px; width:60%; border-radius:8px; border:none; }
+button { padding:12px; background:#22c55e; border:none; color:white; border-radius:8px; }
 
-/* MAP */
-.map{
-height:200px;
-background:#eaeaea;
-display:flex;
-align-items:center;
-justify-content:center;
-border-radius:10px;
-color:#555;
-font-size:14px
-}
+#map { height:350px; border-radius:12px; }
 
-/* ADMIN BUTTON */
-.admin-btn{
-position:fixed;
-bottom:20px;
-right:20px;
-background:#4D148C;
-color:#fff;
-width:60px;height:60px;
-border-radius:50%;
-display:flex;
-align-items:center;
-justify-content:center;
-font-size:22px
-}
+.msg { background:#1e293b; padding:10px; margin:5px; border-radius:8px; }
 
-/* HIDDEN */
-.hidden{display:none}
-
-/* FOOTER */
-.footer{
-background:#111;
-color:#fff;
-padding:25px;
-text-align:center;
-margin-top:40px
-}
+.eta { font-size:18px; margin-top:10px; color:#22c55e; }
 </style>
 </head>
 
 <body>
 
-<div class="header">
-<h2>🌍 GlobeX Logistics ✈️</h2>
-<p>Global Shipment Tracking System</p>
-</div>
+<div class="header">📦 Premium Live Tracking</div>
 
 <div class="container">
 
-<!-- TRACK -->
-<div id="trackPage">
 <div class="card">
-<input id="trackInput" placeholder="Enter tracking code">
-<button onclick="track()">Track Shipment</button>
+<input id="trackId" placeholder="Tracking ID">
+<button onclick="track()">Track</button>
 </div>
 
-<div id="result"></div>
-</div>
-
-<!-- LOGIN -->
-<div id="loginPage" class="hidden">
 <div class="card">
-<h3>Admin Login</h3>
-<input id="pass" placeholder="Password">
-<button onclick="login()">Login</button>
-</div>
+<h3>Status</h3>
+<div id="chat"></div>
+<div class="eta" id="eta"></div>
 </div>
 
-<!-- ADMIN -->
-<div id="adminPage" class="hidden">
 <div class="card">
-<h3>Create / Update Shipment</h3>
-
-<input id="code" placeholder="Tracking code">
-<input id="from" placeholder="From (e.g China)">
-<input id="to" placeholder="To (e.g Philippines)">
-
-<textarea id="history" placeholder="One per line:
-📦 Package received
-✈️ Departed
-🌍 Arrived
-🚚 Out for delivery"></textarea>
-
-<button onclick="save()">Save Shipment</button>
-</div>
+<div id="map"></div>
 </div>
 
 </div>
 
-<div class="footer">
-<p>GlobeX Logistics</p>
-<p>Email: support@globex.com</p>
-<p>Worldwide Delivery Services</p>
-</div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
-<div class="admin-btn" onclick="openAdmin()">⚙️</div>
+const firebaseConfig = {
+  apiKey: "AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
+  authDomain: "globaltrackingsystem-f14c2.firebaseapp.com",
+  projectId: "globaltrackingsystem-f14c2",
+};
 
-<!-- FIREBASE -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+window.db = db;
+window.onSnapshot = onSnapshot;
+window.doc = doc;
+</script>
 
 <script>
+let map, marker;
 
-firebase.initializeApp({
-apiKey:"AIzaSyBQr2KtnYQWNUmFu_54AUzmM1zMw2las14",
-authDomain:"fedex-tracking-system.firebaseapp.com",
-projectId:"fedex-tracking-system"
-});
-
-const db = firebase.firestore();
-
-// TRACK
+// 🚀 TRACK
 function track(){
+  const id = trackId.value;
 
-let c = trackInput.value.trim();
+  window.onSnapshot(window.doc(window.db,"shipments",id),(snap)=>{
+    if(!snap.exists()) return alert("Tracking not found");
 
-db.collection("shipments").doc(c).get().then(doc=>{
+    const data = snap.data();
 
-if(!doc.exists){
-result.innerHTML="<div class='card'>❌ Tracking not found</div>";
-return;
+    initMap(data.route);
+    showMessages(data.status);
+    startETA(data.route);
+  });
 }
 
-let d = doc.data();
+// 🌍 MAP
+function initMap(route){
+  map = new google.maps.Map(document.getElementById("map"), {
+    zoom:5,
+    center:route[0],
+  });
 
-let timeline="";
-(d.manualHistory||[]).forEach(h=>{
-timeline+=`<div class="item">${h}</div>`;
-});
+  marker = new google.maps.Marker({
+    position:route[0],
+    map:map,
+    icon:{
+      url:"https://maps.google.com/mapfiles/kml/shapes/truck.png",
+      scaledSize:new google.maps.Size(40,40),
+      rotation:0
+    }
+  });
 
-let last=(d.manualHistory||[]).slice(-1)[0]||"In transit";
-
-let statusClass="intransit";
-
-if(last.toLowerCase().includes("hold")) statusClass="hold";
-if(last.toLowerCase().includes("deliver")) statusClass="delivered";
-
-result.innerHTML=`
-<div class="grid">
-
-<div class="left">
-<div class="card">
-<h3>Shipment Timeline</h3>
-<div class="timeline">${timeline}</div>
-</div>
-</div>
-
-<div class="right">
-
-<div class="card">
-<div class="status ${statusClass}">${last}</div>
-</div>
-
-<div class="card">
-<p><b>From:</b> ${d.from}</p>
-<p><b>To:</b> ${d.to}</p>
-<p><b>Tracking:</b> ${c}</p>
-</div>
-
-<div class="card">
-<div class="map">Shipment route overview</div>
-</div>
-
-</div>
-
-</div>
-`;
-
-});
+  animate(route);
 }
 
-// ADMIN
-function openAdmin(){
-trackPage.classList.add("hidden");
-loginPage.classList.remove("hidden");
+// 🧠 ROTATION FUNCTION
+function getRotation(start,end){
+  let dy = end.lat - start.lat;
+  let dx = end.lng - start.lng;
+  return Math.atan2(dy,dx) * 180 / Math.PI;
 }
 
-// LOGIN
-function login(){
-if(pass.value==="admin123"){
-loginPage.classList.add("hidden");
-adminPage.classList.remove("hidden");
-}else{
-alert("Wrong password");
+// 🚚 SMOOTH GPS + ROTATION
+function animate(route){
+  let i=0;
+
+  function move(){
+    if(i >= route.length-1) return;
+
+    let start = route[i];
+    let end = route[i+1];
+
+    let step=0;
+
+    let interval = setInterval(()=>{
+      step += 0.01;
+
+      let lat = start.lat + (end.lat-start.lat)*step;
+      let lng = start.lng + (end.lng-start.lng)*step;
+
+      lat += Math.sin(step*Math.PI)*0.2;
+
+      marker.setPosition({lat,lng});
+
+      // rotation
+      let angle = getRotation(start,end);
+      marker.setIcon({
+        url:"https://maps.google.com/mapfiles/kml/shapes/truck.png",
+        scaledSize:new google.maps.Size(40,40),
+        rotation:angle
+      });
+
+      map.panTo({lat,lng});
+
+      if(step>=1){
+        clearInterval(interval);
+        i++;
+        move();
+      }
+    },30);
+  }
+
+  move();
 }
+
+// 💬 STATUS
+function showMessages(status){
+  chat.innerHTML="";
+
+  const msgs = [
+    "📦 Shipment created",
+    "🚚 Picked up",
+    "✈️ In transit",
+    "🛃 Customs clearance",
+    "📍 Out for delivery",
+    "✅ Delivered"
+  ];
+
+  for(let i=0;i<status;i++){
+    let div=document.createElement("div");
+    div.className="msg";
+    div.innerText=msgs[i];
+    chat.appendChild(div);
+  }
 }
 
-// SAVE
-function save(){
+// ⏱️ ETA SYSTEM
+function startETA(route){
+  let totalSteps = route.length * 10;
+  let time = totalSteps * 2; // seconds
 
-let list = history.value.split("\n");
+  function update(){
+    let mins = Math.floor(time/60);
+    let secs = time%60;
 
-db.collection("shipments").doc(code.value).set({
-from:from.value,
-to:to.value,
-manualHistory:list
-});
+    eta.innerText = "ETA: " + mins + "m " + secs + "s";
 
-alert("Saved successfully");
+    if(time>0){
+      time--;
+      setTimeout(update,1000);
+    }else{
+      eta.innerText = "Arrived";
+    }
+  }
+
+  update();
 }
-
 </script>
 
 </body>
