@@ -313,18 +313,33 @@ load();
 }else alert("Wrong password");
 };
 
-window.save=async()=>{
-await setDoc(doc(db,"shipments",code.value),{
-from:from.value,
-to:to.value,
-status:status.value,
-manualHistory:history.value.split(","),
-receiverName:receiverName.value,
-receiverAddress:receiverAddress.value,
-receiverPhone:receiverPhone.value
+window.save = async () => {
+
+if(!code.value || !from.value || !to.value){
+alert("Please fill all required fields");
+return;
+}
+
+try {
+
+await setDoc(doc(db,"shipments",code.value.trim()),{
+from: from.value.trim(),
+to: to.value.trim(),
+status: status.value,
+manualHistory: history.value ? history.value.split(",") : [],
+receiverName: receiverName.value.trim(),
+receiverAddress: receiverAddress.value.trim(),
+receiverPhone: receiverPhone.value.trim()
 });
-alert("Saved");
+
+alert("✅ Saved successfully");
 load();
+
+} catch(err){
+console.error(err);
+alert("❌ Error: " + err.message);
+}
+
 };
 
 // LOAD
