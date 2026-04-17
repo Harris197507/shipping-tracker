@@ -7,150 +7,287 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 <style>
-body{font-family:'Segoe UI',sans-serif;margin:0;background:#0d1117;color:#fff}
-.header{background:linear-gradient(90deg,#4D148C,#FF6600);padding:20px;text-align:center;font-size:22px;font-weight:bold}
-.container{max-width:520px;margin:20px auto;background:#161b22;padding:20px;border-radius:12px}
-input{width:100%;padding:12px;margin-top:10px;border-radius:8px;border:none;background:#30363d;color:#fff}
-button{width:100%;padding:12px;margin-top:10px;background:#FF6600;color:#fff;border:none;border-radius:8px;font-weight:bold}
-.status{padding:12px;border-radius:10px;margin-top:10px;background:#1c2e40}
-.history{background:#30363d;padding:10px;margin-top:8px;border-radius:8px}
-#map{height:250px;margin-top:15px;border-radius:10px}
-.admin-btn{position:fixed;bottom:20px;right:20px;width:55px;height:55px;border-radius:50%;background:#4D148C;color:#fff;font-size:22px}
+body{
+margin:0;
+font-family:Segoe UI;
+background:#0a0f1a;
+color:#fff;
+}
+
+.header{
+background:#4D148C;
+padding:18px;
+text-align:center;
+font-weight:bold;
+font-size:20px;
+}
+
+.container{
+max-width:520px;
+margin:15px auto;
+padding:15px;
+background:#121826;
+border-radius:12px;
+}
+
+input{
+width:100%;
+padding:12px;
+margin-top:10px;
+border-radius:8px;
+border:none;
+}
+
+button{
+width:100%;
+padding:12px;
+margin-top:10px;
+background:#FF6600;
+color:#fff;
+border:none;
+border-radius:8px;
+font-weight:bold;
+}
+
+.status{
+background:#1f2937;
+padding:12px;
+border-radius:10px;
+margin-top:10px;
+}
+
+.history{
+background:#111827;
+padding:10px;
+margin-top:8px;
+border-radius:8px;
+}
+
+.timeline{
+border-left:3px solid #FF6600;
+padding-left:10px;
+margin-top:10px;
+}
+
 .hidden{display:none}
+
+.admin-btn{
+position:fixed;
+bottom:20px;
+right:20px;
+width:60px;
+height:60px;
+border-radius:50%;
+background:#FF6600;
+color:#fff;
+font-size:22px;
+}
+
+#map{
+height:260px;
+margin-top:15px;
+border-radius:10px;
+}
+
+.pay-btn{
+background:#16a34a;
+}
 </style>
 </head>
 
 <body>
 
 <div class="header">
-🌍 GlobeX Logistics ✈️
-<p>Delivering Beyond Borders 🚚📦</p>
+📦 GlobeX Logistics (FedEx Style)
 </div>
 
 <div class="container" id="trackPage">
-<h2>Track Shipment 📦</h2>
-<input id="trackInput" placeholder="Enter tracking code">
-<button onclick="track()">Track 🚀</button>
+<input id="trackInput" placeholder="Enter Tracking Code">
+<button onclick="track()">Track</button>
 <div id="result"></div>
 <div id="map"></div>
 </div>
 
 <div class="container hidden" id="loginPage">
-<h2>Admin Login 🔐</h2>
-<input id="pass" placeholder="Password">
+<input id="email" placeholder="Admin Email">
+<input id="password" placeholder="Password">
 <button onclick="login()">Login</button>
 </div>
 
 <div class="container hidden" id="adminPage">
-<h2>Admin Panel ⚙️</h2>
+<h3>Admin Dashboard</h3>
+
 <input id="code" placeholder="Tracking Code">
 <input id="from" placeholder="From">
 <input id="to" placeholder="To">
 <input id="date" placeholder="Delivery Date YYYY-MM-DD">
+
+<h4>Customer</h4>
+<input id="receiverName" placeholder="Name">
+<input id="receiverAddress" placeholder="Address">
+<input id="receiverPhone" placeholder="Phone">
+
 <button onclick="save()">Save</button>
+
 <div id="list"></div>
 </div>
 
 <button class="admin-btn" onclick="openAdmin()">⚙️</button>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://js.stripe.com/v3/"></script>
 
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const app = initializeApp({
-apiKey:"AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
-authDomain:"globaltrackingsystem-f14c2.firebaseapp.com",
-projectId:"globaltrackingsystem-f14c2"
+apiKey: "AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
+authDomain: "globaltrackingsystem-f14c2.firebaseapp.com",
+projectId: "globaltrackingsystem-f14c2",
+storageBucket: "globaltrackingsystem-f14c2.appspot.com",
+messagingSenderId: "199571170052",
+appId: "1:199571170052:web:d8bf1b09c17016979f6651"
 });
 
 const db = getFirestore(app);
+const auth = getAuth(app);
 
-let map, marker, line;
-
-window.track = async ()=>{
-let code = document.getElementById("trackInput").value.trim();
-if(!code){ result.innerHTML="Enter tracking code"; return; }
-
-let snap = await getDoc(doc(db,"shipments",code));
-if(!snap.exists()){ result.innerHTML="❌ Not found"; return; }
-
-let d = snap.data();
-
-result.innerHTML = `
-<h3>${code}</h3>
-<div class="status">📦 In Transit</div>
-<p><b>From:</b> ${d.from}</p>
-<p><b>To:</b> ${d.to}</p>
-`;
-
-loadMap(d.route);
-};
-
-function loadMap(route){
-if(!route || route.length < 2){ return; }
-
-let coords = route.map(p=>[p.lat,p.lng]);
-
-if(!map){
-map = L.map('map').setView(coords[0],5);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-}
-
-if(line) map.removeLayer(line);
-if(marker) map.removeLayer(marker);
-
-line = L.polyline(coords,{color:'orange'}).addTo(map);
-marker = L.marker(coords[0]).addTo(map);
-
-map.fitBounds(line.getBounds());
-
-let i=0;
-setInterval(()=>{
-i++;
-if(i>=coords.length) i=0;
-marker.setLatLng(coords[i]);
-},2000);
-}
-
+// ADMIN LOGIN
 window.openAdmin=()=>{
 trackPage.classList.add("hidden");
 loginPage.classList.remove("hidden");
 };
 
 window.login=()=>{
-if(pass.value==="admin123"){
+signInWithEmailAndPassword(auth,email.value,password.value)
+.then(()=>{
 loginPage.classList.add("hidden");
 adminPage.classList.remove("hidden");
 load();
-}else alert("Wrong password");
+})
+.catch(()=>alert("Login failed"));
 };
 
+// SAVE
 window.save=async()=>{
 await setDoc(doc(db,"shipments",code.value),{
 from:from.value,
 to:to.value,
 deliveryDate:date.value,
-route:[
-{lat:26,lng:119},
-{lat:22,lng:121},
-{lat:18,lng:122},
-{lat:14,lng:121}
-]
+receiverName:receiverName.value,
+receiverAddress:receiverAddress.value,
+receiverPhone:receiverPhone.value
 });
-alert("Saved ✅");
+alert("Saved");
 load();
 };
 
+// LOAD
 async function load(){
-const snap = await getDocs(collection(db,"shipments"));
+let snap=await getDocs(collection(db,"shipments"));
 let html="";
 snap.forEach(d=>{
 html+=`<div class="history">${d.id}</div>`;
 });
-list.innerHTML = html;
+list.innerHTML=html;
 }
+
+// STATUS
+function autoHistory(date){
+let steps=["Created","Picked up","In transit","Out for delivery","Delivered"];
+let today=new Date();
+let d=new Date(date);
+let diff=Math.ceil((d-today)/(1000*60*60*24));
+let i=5-diff;
+if(i<0)i=0;
+if(i>4)i=4;
+return steps.slice(0,i+1);
+}
+
+// TRACK
+let map,marker;
+
+window.track=async()=>{
+let snap=await getDoc(doc(db,"shipments",trackInput.value));
+
+if(!snap.exists()){
+result.innerHTML="Not found";
+return;
+}
+
+let d=snap.data();
+let history=autoHistory(d.deliveryDate);
+
+let html="";
+history.forEach(h=>{
+html+=`<div class="history">${h}</div>`;
+});
+
+result.innerHTML=`
+<div class="status">${history[history.length-1]}</div>
+
+<p>From: ${d.from}</p>
+<p>To: ${d.to}</p>
+
+<div class="timeline">${html}</div>
+
+<h4>Receiver</h4>
+<div class="history">
+${d.receiverName}<br>
+${d.receiverAddress}<br>
+${d.receiverPhone}
+</div>
+
+<button class="pay-btn" onclick="pay()">Pay Delivery</button>
+`;
+
+initMap();
+};
+
+// CURVED ROUTE
+function curveRoute(){
+return [
+[6.5,3.3],
+[7.2,4.5],
+[8.5,6.2],
+[9.5,7.4]
+];
+}
+
+// MAP
+function initMap(){
+if(map) map.remove();
+
+map=L.map('map').setView([7,5],5);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+let route=curveRoute();
+
+L.polyline(route,{color:'orange'}).addTo(map);
+
+marker=L.marker(route[0]).addTo(map);
+
+let i=0;
+
+setInterval(()=>{
+i++;
+if(i<route.length){
+marker.setLatLng(route[i]);
+}
+},1500);
+}
+
+// PAYMENT
+const stripe = Stripe("pk_test_xxx");
+
+window.pay=()=>{
+alert("Payment page placeholder (add Stripe key)");
+};
+
 </script>
 
 </body>
