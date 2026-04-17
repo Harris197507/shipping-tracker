@@ -1,21 +1,44 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Tracking</title>
+  <title>Tracking System</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
   <style>
-    body { background:#0b1a2a; color:white; padding:20px; font-family:Arial; }
-    input, button { padding:10px; margin:5px; border-radius:8px; border:none; }
-    #map { height:300px; margin-top:20px; }
+    body {
+      background:#0b1a2a;
+      color:white;
+      padding:20px;
+      font-family:Arial;
+    }
+
+    input, button {
+      padding:10px;
+      margin:5px;
+      border-radius:8px;
+      border:none;
+    }
+
+    #map {
+      height:300px;
+      margin-top:20px;
+    }
+
+    .box {
+      background:#1c2e40;
+      padding:10px;
+      margin-top:10px;
+      border-radius:8px;
+    }
   </style>
 </head>
 
 <body>
 
-<h2>📦 Tracking</h2>
+<h2>📦 Live Tracking</h2>
 
 <input id="tracking" placeholder="Tracking ID">
 <button onclick="track()">Track</button>
@@ -23,68 +46,114 @@
 <div id="status"></div>
 <div id="map"></div>
 
-<!-- Firebase SAFE VERSION -->
+<h3>🔐 Admin</h3>
+<input id="adminId" placeholder="Tracking ID">
+<input id="lat" placeholder="Lat">
+<input id="lng" placeholder="Lng">
+<button onclick="addRoute()">Add</button>
+
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
+<!-- Leaflet -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-try {
 
+// ✅ YOUR FIREBASE CONFIG (ALREADY INSERTED)
 const firebaseConfig = {
-  apiKey: "PASTE_REAL_KEY",
-  authDomain: "PASTE.firebaseapp.com",
-  projectId: "PASTE_PROJECT_ID",
+  apiKey: "AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
+  authDomain: "globaltrackingsystem-f14c2.firebaseapp.com",
+  projectId: "globaltrackingsystem-f14c2",
+  storageBucket: "globaltrackingsystem-f14c2.firebasestorage.app",
+  messagingSenderId: "199571170052",
+  appId: "1:199571170052:web:d8bf1b09c17016979f6651",
+  measurementId: "G-RTR48KS8G7"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-let map;
+let map, marker, line;
 
+// 🔍 TRACK
 function track() {
   const id = document.getElementById("tracking").value;
 
   db.collection("shipments").doc(id).get().then(doc => {
-
     if (!doc.exists) {
-      alert("Not found");
+      alert("Tracking not found");
       return;
     }
 
     const data = doc.data();
 
-    document.getElementById("status").innerHTML =
-      "📦 In transit | ETA: " + (data.eta || "...");
+    document.getElementById("status").innerHTML = `
+      <div class="box">📦 Created</div>
+      <div class="box">🚚 Picked up</div>
+      <div class="box">📍 In transit</div>
+      <div class="box">ETA: ${data.eta || "Updating..."}</div>
+    `;
 
     drawMap(data.route);
-
-  }).catch(err => {
-    alert("Firebase error: " + err.message);
   });
 }
 
+// 🗺 MAP
 function drawMap(route) {
   if (!route || route.length === 0) return;
 
-  const first = route[0];
+  const coords = route.map(p => [p.lat, p.lng]);
 
   if (!map) {
-    map = L.map('map').setView([first.lat, first.lng], 5);
+    map = L.map('map').setView(coords[0], 5);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
   }
 
-  const points = route.map(p => [p.lat, p.lng]);
+  if (line) map.removeLayer(line);
+  if (marker) map.removeLayer(marker);
 
-  L.polyline(points).addTo(map);
-  L.marker(points[0]).addTo(map);
+  line = L.polyline(coords, {color:'lime'}).addTo(map);
+  marker = L.marker(coords[0]).addTo(map);
+
+  let i = 0;
+
+  setInterval(() => {
+    if (i < coords.length) {
+      marker.setLatLng(coords[i]);
+      map.panTo(coords[i]);
+      i++;
+    }
+  }, 2000);
 }
 
-} catch(e) {
-  document.body.innerHTML = "<h2 style='color:red'>ERROR: "+e.message+"</h2>";
+// 🔐 ADMIN ADD ROUTE
+function addRoute() {
+  const id = document.getElementById("adminId").value;
+  const lat = Number(document.getElementById("lat").value);
+  const lng = Number(document.getElementById("lng").value);
+
+  const ref = db.collection("shipments").doc(id);
+
+  ref.get().then(doc => {
+    let route = [];
+
+    if (doc.exists) route = doc.data().route || [];
+
+    route.push({ lat, lng });
+
+    ref.set({
+      route: route,
+      status: 2,
+      eta: "Updating..."
+    });
+
+    alert("Added ✅");
+  });
 }
+
 </script>
 
 </body>
