@@ -4,43 +4,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GlobeX Logistics</title>
 
-<style>
-body{
-margin:0;
-font-family:Segoe UI;
-background:#eef1f5;
-}
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-/* HEADER */
+<style>
+body{margin:0;font-family:Segoe UI;background:#eef1f5;}
+
 .header{
 background:linear-gradient(90deg,#6a11cb,#ff6600);
 color:#fff;
 text-align:center;
 padding:20px;
-font-weight:bold;
 }
 
-/* CONTAINER */
 .container{
 max-width:520px;
 margin:15px auto;
 background:#fff;
 padding:20px;
 border-radius:20px;
-box-shadow:0 5px 15px rgba(0,0,0,0.1);
 }
 
-/* INPUT */
 input{
 width:100%;
 padding:14px;
 margin-top:10px;
 border-radius:12px;
 border:1px solid #ddd;
-font-size:15px;
 }
 
-/* BUTTON */
 button{
 width:100%;
 padding:14px;
@@ -50,18 +42,15 @@ border-radius:12px;
 background:#ff6600;
 color:#fff;
 font-weight:bold;
-font-size:16px;
 }
 
-/* LIST */
 .card{
 background:#f5f6f8;
 padding:15px;
-margin-top:12px;
+margin-top:10px;
 border-radius:15px;
 }
 
-/* FLOAT BUTTON */
 .admin-btn{
 position:fixed;
 bottom:25px;
@@ -82,38 +71,31 @@ border:none;
 <body>
 
 <div class="header">
-🌍 GlobeX Logistics 🚚📦  
-<p>Delivering Beyond Borders</p>
+🌍 GlobeX Logistics 🚚📦
 </div>
 
-<!-- TRACK PAGE -->
 <div class="container" id="trackPage">
-<h3>Track Shipment</h3>
 <input id="trackInput" placeholder="Enter tracking code">
 <button onclick="track()">Track</button>
 <div id="result"></div>
 </div>
 
-<!-- LOGIN -->
 <div class="container hidden" id="loginPage">
-<h3>Admin Login 🔐</h3>
-<input id="password" placeholder="Enter password">
+<input id="password" placeholder="Admin password">
 <button onclick="login()">Login</button>
 </div>
 
-<!-- ADMIN PANEL -->
 <div class="container hidden" id="adminPage">
 <h2>Admin Panel ⚙️</h2>
 
 <input id="code" placeholder="Tracking Code">
-<input id="from" placeholder="From (Country)">
-<input id="to" placeholder="To (Country)">
-<input id="date" placeholder="Delivery Date YYYY-MM-DD">
+<input id="from" placeholder="From">
+<input id="to" placeholder="To">
+<input id="date" placeholder="Delivery Date">
 
 <input id="history" placeholder="Status (comma separated)">
 
-<h3>Customer</h3>
-<input id="name" placeholder="Name">
+<input id="name" placeholder="Customer Name">
 <input id="address" placeholder="Address">
 <input id="phone" placeholder="Phone">
 
@@ -124,26 +106,23 @@ border:none;
 
 <button class="admin-btn" onclick="openAdmin()">⚙️</button>
 
-<script type="module">
+<script>
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, getDocs, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-const app = initializeApp({
+firebase.initializeApp({
 apiKey: "AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
 authDomain: "globaltrackingsystem-f14c2.firebaseapp.com",
 projectId: "globaltrackingsystem-f14c2"
 });
 
-const db = getFirestore(app);
+const db = firebase.firestore();
 
 /* LOGIN */
-window.openAdmin=()=>{
+function openAdmin(){
 trackPage.classList.add("hidden");
 loginPage.classList.remove("hidden");
-};
+}
 
-window.login=()=>{
+function login(){
 if(password.value==="admin123"){
 loginPage.classList.add("hidden");
 adminPage.classList.remove("hidden");
@@ -151,54 +130,53 @@ load();
 }else{
 alert("Wrong password");
 }
-};
+}
 
 /* SAVE */
-window.save=async()=>{
-await setDoc(doc(db,"shipments",code.value),{
+function save(){
+db.collection("shipments").doc(code.value).set({
 from:from.value,
 to:to.value,
 date:date.value,
-history: history.value.split(","),
+history:history.value.split(","),
 name:name.value,
 address:address.value,
 phone:phone.value
 });
+
 alert("Saved");
 load();
-};
+}
 
 /* LOAD */
-async function load(){
-let snap=await getDocs(collection(db,"shipments"));
+function load(){
+db.collection("shipments").get().then(snap=>{
 let html="";
-snap.forEach(d=>{
+snap.forEach(doc=>{
 html+=`
 <div class="card">
-${d.id}
-<button onclick="del('${d.id}')">Delete</button>
-</div>
-`;
+${doc.id}
+<button onclick="del('${doc.id}')">Delete</button>
+</div>`;
 });
 list.innerHTML=html;
+});
 }
 
 /* DELETE */
-window.del=async(id)=>{
-await deleteDoc(doc(db,"shipments",id));
-load();
-};
+function del(id){
+db.collection("shipments").doc(id).delete().then(load);
+}
 
 /* TRACK */
-window.track=async()=>{
-let snap=await getDoc(doc(db,"shipments",trackInput.value));
-
-if(!snap.exists()){
+function track(){
+db.collection("shipments").doc(trackInput.value).get().then(doc=>{
+if(!doc.exists){
 result.innerHTML="❌ Not found";
 return;
 }
 
-let d=snap.data();
+let d=doc.data();
 
 let h="";
 d.history.forEach(i=>{
@@ -213,14 +191,14 @@ result.innerHTML=`
 
 ${h}
 
-<h4>Customer</h4>
 <div class="card">
 ${d.name}<br>
 ${d.address}<br>
 ${d.phone}
 </div>
 `;
-};
+});
+}
 
 </script>
 
