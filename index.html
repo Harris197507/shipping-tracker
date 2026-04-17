@@ -5,238 +5,273 @@
 <title>GlobeX Logistics</title>
 
 <style>
-body{font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9;transition:.3s}
-.dark{background:#0d1117;color:#fff}
+body{margin:0;font-family:'Segoe UI',sans-serif;background:#f4f6f9}
 
-.header{background:linear-gradient(90deg,#4D148C,#FF6600);color:#fff;padding:20px;text-align:center;font-size:22px;font-weight:bold}
-
-.container{max-width:520px;margin:20px auto;background:#fff;padding:20px;border-radius:12px}
-.dark .container{background:#161b22}
-
-input,textarea{width:100%;padding:12px;margin-top:10px;border-radius:8px;border:1px solid #ccc}
-button{width:100%;padding:12px;margin-top:10px;background:#FF6600;color:#fff;border:none;border-radius:8px;font-weight:bold}
-
-.status{padding:12px;border-radius:10px;margin-top:10px;color:#fff}
-.history{background:#eee;padding:10px;margin-top:8px;border-radius:8px}
-.dark .history{background:#30363d}
-
-.timeline{border-left:4px solid #FF6600;padding-left:10px;margin-top:10px}
-
-.admin-btn{
-position:fixed;
-bottom:80px;
-right:20px;
-width:55px;
-height:55px;
-border-radius:50%;
-background:#4D148C;
+/* HEADER */
+.header{
+background:linear-gradient(90deg,#4D148C,#FF6600);
 color:#fff;
-font-size:22px;
+padding:25px;
+text-align:center
+}
+.header h2{margin:0}
+.header p{margin:5px 0 0}
+
+/* CONTAINER */
+.container{max-width:1000px;margin:20px auto;padding:15px}
+
+/* CARD */
+.card{
+background:#fff;
+padding:18px;
+border-radius:12px;
+margin-bottom:15px;
+box-shadow:0 4px 12px rgba(0,0,0,0.08)
 }
 
-.toggle{position:fixed;top:10px;right:10px}
+/* GRID */
+.grid{display:flex;gap:15px;flex-wrap:wrap}
+.left{flex:2}
+.right{flex:1}
+
+/* TIMELINE */
+.timeline{border-left:4px solid #FF6600;padding-left:12px}
+.item{margin-bottom:12px}
+
+/* STATUS */
+.status{
+padding:12px;
+border-radius:8px;
+text-align:center;
+font-weight:bold;
+color:#fff
+}
+.intransit{background:#007bff}
+.hold{background:#dc3545}
+.delivered{background:#28a745}
+
+/* INPUT */
+input,textarea{
+width:100%;
+padding:12px;
+margin-bottom:10px;
+border-radius:8px;
+border:1px solid #ccc
+}
+
+/* BUTTON */
+button{
+width:100%;
+padding:12px;
+background:#FF6600;
+color:#fff;
+border:none;
+border-radius:8px;
+font-weight:bold
+}
+
+/* MAP */
+.map{
+height:200px;
+background:#eaeaea;
+display:flex;
+align-items:center;
+justify-content:center;
+border-radius:10px;
+color:#555;
+font-size:14px
+}
+
+/* ADMIN BUTTON */
+.admin-btn{
+position:fixed;
+bottom:20px;
+right:20px;
+background:#4D148C;
+color:#fff;
+width:60px;height:60px;
+border-radius:50%;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:22px
+}
+
+/* HIDDEN */
 .hidden{display:none}
-.pay-btn{background:#28a745}
+
+/* FOOTER */
+.footer{
+background:#111;
+color:#fff;
+padding:25px;
+text-align:center;
+margin-top:40px
+}
 </style>
 </head>
 
 <body>
 
-<div class="toggle">
-<button onclick="toggleDark()">🌙</button>
+<div class="header">
+<h2>🌍 GlobeX Logistics ✈️</h2>
+<p>Global Shipment Tracking System</p>
 </div>
 
-<div class="header">
-🌍 GlobeX Logistics ✈️  
-<p>Delivering Beyond Borders 🚚📦⛴️</p>
-</div>
+<div class="container">
 
 <!-- TRACK -->
-<div class="container" id="trackPage">
-<h2>Track Shipment 📦</h2>
+<div id="trackPage">
+<div class="card">
 <input id="trackInput" placeholder="Enter tracking code">
-<button onclick="track()">Track 🚀</button>
+<button onclick="track()">Track Shipment</button>
+</div>
+
 <div id="result"></div>
 </div>
 
 <!-- LOGIN -->
-<div class="container hidden" id="loginPage">
-<h2>Admin Login 🔐</h2>
+<div id="loginPage" class="hidden">
+<div class="card">
+<h3>Admin Login</h3>
 <input id="pass" placeholder="Password">
 <button onclick="login()">Login</button>
 </div>
-
-<!-- ADMIN -->
-<div class="container hidden" id="adminPage">
-<h2>Admin Panel ⚙️</h2>
-
-<input id="code" placeholder="Tracking Code">
-<input id="from" placeholder="From">
-<input id="to" placeholder="To">
-<input id="date" placeholder="Delivery Date (YYYY-MM-DD)">
-<textarea id="manualHistory" placeholder="Optional history (comma separated)"></textarea>
-
-<h3>Receiver Details</h3>
-<input id="receiverName" placeholder="Receiver Name">
-<input id="receiverAddress" placeholder="Receiver Address">
-<input id="receiverEmail" placeholder="Receiver Email">
-<input id="receiverPhone" placeholder="Receiver Phone">
-
-<button onclick="save()">Save</button>
-
-<div id="list"></div>
 </div>
 
-<button class="admin-btn" onclick="openAdmin()">⚙️</button>
+<!-- ADMIN -->
+<div id="adminPage" class="hidden">
+<div class="card">
+<h3>Create / Update Shipment</h3>
 
-<script src="https://js.stripe.com/v3/"></script>
+<input id="code" placeholder="Tracking code">
+<input id="from" placeholder="From (e.g China)">
+<input id="to" placeholder="To (e.g Philippines)">
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, getDocs, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+<textarea id="history" placeholder="One per line:
+📦 Package received
+✈️ Departed
+🌍 Arrived
+🚚 Out for delivery"></textarea>
 
-const app = initializeApp({
+<button onclick="save()">Save Shipment</button>
+</div>
+</div>
+
+</div>
+
+<div class="footer">
+<p>GlobeX Logistics</p>
+<p>Email: support@globex.com</p>
+<p>Worldwide Delivery Services</p>
+</div>
+
+<div class="admin-btn" onclick="openAdmin()">⚙️</div>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<script>
+
+firebase.initializeApp({
 apiKey:"AIzaSyBQr2KtnYQWNUmFu_54AUzmM1zMw2las14",
 authDomain:"fedex-tracking-system.firebaseapp.com",
 projectId:"fedex-tracking-system"
 });
-const db = getFirestore(app);
 
-// DARK MODE
-if(localStorage.getItem("dark")==="true") document.body.classList.add("dark");
-window.toggleDark=()=>{
-document.body.classList.toggle("dark");
-localStorage.setItem("dark",document.body.classList.contains("dark"));
-};
+const db = firebase.firestore();
 
-// AUTO TRACKING ENGINE
-function autoHistory(date){
-const steps=[
-"📦 Package received",
-"✈️ Departed origin",
-"🌎 Arrived destination country",
-"🚚 Out for delivery",
-"💳 Ready for delivery payment"
-];
+// TRACK
+function track(){
 
-const today=new Date();
-const delivery=new Date(date);
+let c = trackInput.value.trim();
 
-const diff=Math.ceil((delivery - today)/(1000*60*60*24));
-let index=5-diff;
+db.collection("shipments").doc(c).get().then(doc=>{
 
-if(index<0) index=0;
-if(index>4) index=4;
-
-return steps.slice(0,index+1);
-}
-
-// TRACK FUNCTION
-window.track=async()=>{
-let code=trackInput.value.trim();
-if(!code){ result.innerHTML="Enter tracking code"; return; }
-
-let snap=await getDoc(doc(db,"shipments",code));
-
-if(!snap.exists()){
-result.innerHTML="❌ Tracking not found";
+if(!doc.exists){
+result.innerHTML="<div class='card'>❌ Tracking not found</div>";
 return;
 }
 
-let d=snap.data();
+let d = doc.data();
 
-let history = d.manualHistory?.length ? d.manualHistory : autoHistory(d.deliveryDate);
-
-let historyHTML="";
-history.forEach(h=>{
-historyHTML+=`<div class="history">${h}</div>`;
+let timeline="";
+(d.manualHistory||[]).forEach(h=>{
+timeline+=`<div class="item">${h}</div>`;
 });
 
-let last=history[history.length-1].replace(/[📦✈️🌎🚚💳]/g,"").trim();
-let showPay = last==="Ready for delivery payment";
+let last=(d.manualHistory||[]).slice(-1)[0]||"In transit";
+
+let statusClass="intransit";
+
+if(last.toLowerCase().includes("hold")) statusClass="hold";
+if(last.toLowerCase().includes("deliver")) statusClass="delivered";
 
 result.innerHTML=`
-<h3>📦 ${code}</h3>
+<div class="grid">
 
-<div class="status" style="background:#ff9800">${last}</div>
-
-<p><b>🌏 From:</b> ${d.from}</p>
-<p><b>📍 To:</b> ${d.to}</p>
-
-<div class="timeline">${historyHTML}</div>
-
-<br>
-
-<h3>📦 Consignee Details</h3>
-<div class="history">
-👤 <b>${d.receiverName || "Not provided"}</b><br><br>
-📍 ${d.receiverAddress || "Not provided"}<br><br>
-📧 ${d.receiverEmail || "Not provided"}<br><br>
-📞 ${d.receiverPhone || "Not provided"}
+<div class="left">
+<div class="card">
+<h3>Shipment Timeline</h3>
+<div class="timeline">${timeline}</div>
+</div>
 </div>
 
-${showPay ? `<button class="pay-btn" onclick="pay()">Pay for Delivery 💳</button>` : ""}
+<div class="right">
+
+<div class="card">
+<div class="status ${statusClass}">${last}</div>
+</div>
+
+<div class="card">
+<p><b>From:</b> ${d.from}</p>
+<p><b>To:</b> ${d.to}</p>
+<p><b>Tracking:</b> ${c}</p>
+</div>
+
+<div class="card">
+<div class="map">Shipment route overview</div>
+</div>
+
+</div>
+
+</div>
 `;
-};
+
+});
+}
 
 // ADMIN
-window.openAdmin=()=>{
+function openAdmin(){
 trackPage.classList.add("hidden");
 loginPage.classList.remove("hidden");
-};
+}
 
-window.login=()=>{
+// LOGIN
+function login(){
 if(pass.value==="admin123"){
 loginPage.classList.add("hidden");
 adminPage.classList.remove("hidden");
-load();
-}else alert("Wrong password");
-};
-
-window.save=async()=>{
-await setDoc(doc(db,"shipments",code.value),{
-from:from.value,
-to:to.value,
-deliveryDate:date.value,
-manualHistory: manualHistory.value ? manualHistory.value.split(",") : [],
-receiverName: receiverName.value,
-receiverAddress: receiverAddress.value,
-receiverEmail: receiverEmail.value,
-receiverPhone: receiverPhone.value
-});
-alert("Saved successfully");
-load();
-};
-
-// LOAD DATA
-async function load(){
-const snap=await getDocs(collection(db,"shipments"));
-let html="";
-snap.forEach(d=>{
-html+=`<div class="history">${d.id}
-<button onclick="delItem('${d.id}')">Delete</button>
-</div>`;
-});
-list.innerHTML=html;
+}else{
+alert("Wrong password");
+}
 }
 
-// DELETE
-window.delItem=async(id)=>{
-await deleteDoc(doc(db,"shipments",id));
-load();
-};
+// SAVE
+function save(){
 
-// PAYMENT (OPTIONAL)
-const stripe = Stripe("YOUR_PUBLIC_KEY");
+let list = history.value.split("\n");
 
-window.pay=()=>{
-stripe.redirectToCheckout({
-lineItems:[{price:"price_xxx",quantity:1}],
-mode:"payment",
-successUrl:window.location.href,
-cancelUrl:window.location.href
+db.collection("shipments").doc(code.value).set({
+from:from.value,
+to:to.value,
+manualHistory:list
 });
-};
+
+alert("Saved successfully");
+}
+
 </script>
 
 </body>
