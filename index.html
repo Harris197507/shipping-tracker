@@ -2,43 +2,23 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Premium Tracking System</title>
+<title>Premium Tracking (Free Map)</title>
 
-<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <style>
-body { margin:0; font-family:Segoe UI; background:#0b1220; color:white; }
-
-.header {
-  padding:20px;
-  text-align:center;
-  font-size:22px;
-  background:#111827;
-}
-
+body { background:#0b1220; color:white; font-family:Segoe UI; }
 .container { padding:20px; }
-
-.card {
-  background:rgba(255,255,255,0.05);
-  padding:15px;
-  border-radius:12px;
-  margin-bottom:15px;
-}
-
-input { padding:12px; width:60%; border-radius:8px; border:none; }
-button { padding:12px; background:#22c55e; border:none; color:white; border-radius:8px; }
-
+.card { background:#111827; padding:15px; border-radius:12px; margin-bottom:15px; }
 #map { height:350px; border-radius:12px; }
-
 .msg { background:#1e293b; padding:10px; margin:5px; border-radius:8px; }
-
-.eta { font-size:18px; margin-top:10px; color:#22c55e; }
+button { padding:10px; background:#22c55e; border:none; color:white; }
+input { padding:10px; width:60%; }
 </style>
 </head>
 
 <body>
-
-<div class="header">📦 Premium Live Tracking</div>
 
 <div class="container">
 
@@ -48,9 +28,8 @@ button { padding:12px; background:#22c55e; border:none; color:white; border-radi
 </div>
 
 <div class="card">
-<h3>Status</h3>
 <div id="chat"></div>
-<div class="eta" id="eta"></div>
+<div id="eta"></div>
 </div>
 
 <div class="card">
@@ -59,75 +38,39 @@ button { padding:12px; background:#22c55e; border:none; color:white; border-radi
 
 </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
-  authDomain: "globaltrackingsystem-f14c2.firebaseapp.com",
-  projectId: "globaltrackingsystem-f14c2",
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-window.db = db;
-window.onSnapshot = onSnapshot;
-window.doc = doc;
-</script>
-
 <script>
 let map, marker;
 
-// 🚀 TRACK
+// SAMPLE DATA (you can replace with Firebase later)
+const demoRoute = [
+  {lat:26, lng:119},
+  {lat:20, lng:120},
+  {lat:14, lng:121}
+];
+
 function track(){
-  const id = trackId.value;
-
-  window.onSnapshot(window.doc(window.db,"shipments",id),(snap)=>{
-    if(!snap.exists()) return alert("Tracking not found");
-
-    const data = snap.data();
-
-    initMap(data.route);
-    showMessages(data.status);
-    startETA(data.route);
-  });
+  drawMap(demoRoute);
+  animate(demoRoute);
+  showMessages(3);
+  startETA(demoRoute);
 }
 
-// 🌍 MAP
-function initMap(route){
-  map = new google.maps.Map(document.getElementById("map"), {
-    zoom:5,
-    center:route[0],
-  });
+// 🗺️ MAP
+function drawMap(route){
+  map = L.map('map').setView([route[0].lat, route[0].lng], 5);
 
-  marker = new google.maps.Marker({
-    position:route[0],
-    map:map,
-    icon:{
-      url:"https://maps.google.com/mapfiles/kml/shapes/truck.png",
-      scaledSize:new google.maps.Size(40,40),
-      rotation:0
-    }
-  });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
+    .addTo(map);
 
-  animate(route);
+  marker = L.marker([route[0].lat, route[0].lng]).addTo(map);
 }
 
-// 🧠 ROTATION FUNCTION
-function getRotation(start,end){
-  let dy = end.lat - start.lat;
-  let dx = end.lng - start.lng;
-  return Math.atan2(dy,dx) * 180 / Math.PI;
-}
-
-// 🚚 SMOOTH GPS + ROTATION
+// 🚚 SMOOTH MOVE
 function animate(route){
   let i=0;
 
   function move(){
-    if(i >= route.length-1) return;
+    if(i>=route.length-1) return;
 
     let start = route[i];
     let end = route[i+1];
@@ -135,31 +78,19 @@ function animate(route){
     let step=0;
 
     let interval = setInterval(()=>{
-      step += 0.01;
+      step += 0.02;
 
       let lat = start.lat + (end.lat-start.lat)*step;
       let lng = start.lng + (end.lng-start.lng)*step;
 
-      lat += Math.sin(step*Math.PI)*0.2;
-
-      marker.setPosition({lat,lng});
-
-      // rotation
-      let angle = getRotation(start,end);
-      marker.setIcon({
-        url:"https://maps.google.com/mapfiles/kml/shapes/truck.png",
-        scaledSize:new google.maps.Size(40,40),
-        rotation:angle
-      });
-
-      map.panTo({lat,lng});
+      marker.setLatLng([lat,lng]);
 
       if(step>=1){
         clearInterval(interval);
         i++;
         move();
       }
-    },30);
+    },50);
   }
 
   move();
@@ -168,15 +99,7 @@ function animate(route){
 // 💬 STATUS
 function showMessages(status){
   chat.innerHTML="";
-
-  const msgs = [
-    "📦 Shipment created",
-    "🚚 Picked up",
-    "✈️ In transit",
-    "🛃 Customs clearance",
-    "📍 Out for delivery",
-    "✅ Delivered"
-  ];
+  const msgs = ["Created","Picked up","In transit","Customs","Out for delivery","Delivered"];
 
   for(let i=0;i<status;i++){
     let div=document.createElement("div");
@@ -186,22 +109,18 @@ function showMessages(status){
   }
 }
 
-// ⏱️ ETA SYSTEM
+// ⏱ ETA
 function startETA(route){
-  let totalSteps = route.length * 10;
-  let time = totalSteps * 2; // seconds
+  let time = route.length * 20;
 
   function update(){
-    let mins = Math.floor(time/60);
-    let secs = time%60;
-
-    eta.innerText = "ETA: " + mins + "m " + secs + "s";
+    eta.innerText = "ETA: " + time + "s";
 
     if(time>0){
       time--;
       setTimeout(update,1000);
     }else{
-      eta.innerText = "Arrived";
+      eta.innerText="Arrived";
     }
   }
 
