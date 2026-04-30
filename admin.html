@@ -1,50 +1,106 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Admin Panel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin • GlobeX</title>
+
+<style>
+body{margin:0;font-family:sans-serif;background:#f3f3f3}
+.header{background:#4d148c;color:white;padding:15px;text-align:center}
+.card{background:white;margin:12px;padding:15px;border-radius:10px}
+input,textarea{width:100%;padding:10px;margin-top:8px;border-radius:6px;border:1px solid #ccc}
+button{width:100%;padding:10px;margin-top:10px;background:#ff6200;color:white;border:none;border-radius:6px}
+</style>
 </head>
+
 <body>
 
-<h2>Admin Panel</h2>
+<div class="header">Admin Dashboard</div>
 
-<input id="code" placeholder="Tracking Code"><br><br>
-<input id="from" placeholder="From"><br><br>
-<input id="to" placeholder="To"><br><br>
-<input id="status" placeholder="Status"><br><br>
+<div class="card">
+<h3>Create Shipment</h3>
 
-<button onclick="saveTracking()">SAVE TRACKING</button>
+<input id="from" placeholder="From">
+<input id="to" placeholder="To">
+<input id="status" placeholder="Status">
+<textarea id="history" placeholder="Timeline (comma separated)"></textarea>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+<input id="receiverName" placeholder="Receiver Name">
+<input id="receiverAddress" placeholder="Receiver Address">
+
+<button onclick="save()">Save Shipment</button>
+</div>
+
+<div class="card">
+<h3>Shipments</h3>
+<div id="list"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBQr2KtnYQWNUmFu_...",
-  authDomain: "fedex-tracking-system.firebaseapp.com",
-  projectId: "fedex-tracking-system",
-  storageBucket: "fedex-tracking-system.appspot.com",
-  messagingSenderId: "936338746045",
-  appId: "1:936338746045:web:b325...",
-  measurementId: "G-ZGWD5F7LP5"
+  apiKey: "AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
+  authDomain: "globaltrackingsystem-f14c2.firebaseapp.com",
+  projectId: "globaltrackingsystem-f14c2"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-window.saveTracking = async function () {
-  const code = document.getElementById("code").value;
-  const from = document.getElementById("from").value;
-  const to = document.getElementById("to").value;
-  const status = document.getElementById("status").value;
+async function save(){
 
-  await setDoc(doc(db, "shipments", code), {
-    from,
-    to,
-    status
+  if(!from.value || !to.value || !receiverName.value || !receiverAddress.value){
+    alert("Fill all fields");
+    return;
+  }
+
+  const code="GLO"+Math.floor(100000+Math.random()*900000);
+
+  await db.collection("shipments").doc(code).set({
+    from:from.value,
+    to:to.value,
+    status:status.value || "In transit",
+    history:history.value ? history.value.split(",").map(x=>x.trim()) : [],
+    receiverName:receiverName.value,
+    receiverAddress:receiverAddress.value
   });
 
-  alert("✅ Saved successfully!");
-};
+  alert("Saved: "+code);
+
+  from.value="";
+  to.value="";
+  status.value="";
+  history.value="";
+  receiverName.value="";
+  receiverAddress.value="";
+}
+
+function loadList(){
+  db.collection("shipments").onSnapshot(snap=>{
+    list.innerHTML="";
+    snap.forEach(doc=>{
+      let d=doc.data();
+
+      list.innerHTML+=`
+      <div style="margin-top:10px">
+        <b>${doc.id}</b><br>
+        ${d.from} → ${d.to}<br>
+        ${d.receiverName}<br>
+        <button onclick="del('${doc.id}')">Delete</button>
+      </div>`;
+    });
+  });
+}
+
+function del(id){
+  db.collection("shipments").doc(id).delete();
+}
+
+loadList();
+
 </script>
 
 </body>
