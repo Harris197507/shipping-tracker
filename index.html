@@ -130,7 +130,7 @@ International Freight • Secure Delivery • Verified Tracking
 <div class="card">
 <h3>Create Shipment</h3>
 
-<input id="code" placeholder="Tracking Code">
+<input id="code" placeholder="Tracking Code (Auto)" readonly>
 <input id="from" placeholder="From">
 <input id="to" placeholder="To">
 
@@ -312,17 +312,20 @@ adminPage.classList.remove("hidden");
 load();
 }else alert("Wrong password");
 };
-
+function generateCode(){
+const num = Math.floor(10000 + Math.random() * 90000);
+return "GLO" + num;
+}
 window.save = async () => {
 
-if(!code.value || !from.value || !to.value){
+if(!from.value || !to.value){
 alert("Please fill all required fields");
 return;
 }
 
-try {
+let trackingCode = code.value || generateCode();
 
-await setDoc(doc(db,"shipments",code.value.trim()),{
+await setDoc(doc(db,"shipments",trackingCode),{
 from: from.value.trim(),
 to: to.value.trim(),
 status: document.getElementById("status").value,
@@ -331,7 +334,7 @@ receiverName: receiverName.value.trim(),
 receiverAddress: receiverAddress.value.trim(),
 receiverPhone: receiverPhone.value.trim()
 });
-
+code.value = trackingCode;
 alert("✅ Saved successfully");
 load();
 
