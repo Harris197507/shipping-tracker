@@ -170,7 +170,9 @@ window.save = async () => {
  to: to.value,
  status: status.value,
  eta: new Date().toDateString(),
- manualHistory: history.value.split(","),
+ manualHistory: history.value
+  ? history.value.split(",").map(x => x.trim())
+  : [],
  receiverName: receiverName.value,
  receiverAddress: receiverAddress.value,
  receiverEmail: receiverEmail.value,
