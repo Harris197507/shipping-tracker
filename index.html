@@ -235,7 +235,7 @@ async function track(){
   let d=snap.data();
   let timeline=d.history.length ? d.history : buildStages();
 
-  let progress=Math.min(timeline.length*20,100);
+let progress = Math.min((timeline.length / 6) * 100, 100);
 
   window.currentData={code,...d};
 
