@@ -9,15 +9,95 @@
 
 <style>
 body{font-family:Segoe UI;margin:0;background:#eef2f7}
-.header{background:#4D148C;color:#fff;padding:18px;text-align:center;font-weight:bold}
-.container{max-width:650px;margin:20px auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 5px 15px rgba(0,0,0,0.1)}
-input,select,textarea{width:100%;padding:12px;margin-top:10px;border-radius:8px;border:1px solid #ccc}
-button{width:100%;padding:12px;margin-top:10px;background:#FF6600;color:#fff;border:none;border-radius:8px;font-weight:bold}
-.status{padding:10px;border-radius:8px;color:#fff;text-align:center;margin-bottom:10px}
-.timeline{border-left:4px solid #FF6600;padding-left:10px;margin-top:10px}
-.admin-btn{position:fixed;bottom:80px;right:20px;width:60px;height:60px;border-radius:50%;background:#4D148C;color:#fff;font-size:22px;border:none}
+
+.header{
+background:#4D148C;
+color:#fff;
+padding:18px;
+text-align:center;
+font-weight:bold
+}
+
+.container{
+max-width:650px;
+margin:20px auto;
+background:#fff;
+padding:20px;
+border-radius:12px;
+box-shadow:0 5px 15px rgba(0,0,0,0.1)
+}
+
+input,select,textarea{
+width:100%;
+padding:12px;
+margin-top:10px;
+border-radius:8px;
+border:1px solid #ccc
+}
+
+button{
+width:100%;
+padding:12px;
+margin-top:12px;
+background:#FF6600;
+color:#fff;
+border:none;
+border-radius:8px;
+font-weight:bold
+}
+
+.status{
+padding:10px;
+border-radius:8px;
+color:#fff;
+text-align:center;
+margin-bottom:10px
+}
+
+.timeline{
+border-left:4px solid #FF6600;
+padding-left:10px;
+margin-top:10px
+}
+
+.admin-btn{
+position:fixed;
+bottom:80px;
+right:20px;
+width:60px;
+height:60px;
+border-radius:50%;
+background:#4D148C;
+color:#fff;
+font-size:22px;
+border:none
+}
+
 .hidden{display:none}
-.badge{background:#eee;padding:6px 10px;border-radius:6px;display:inline-block;margin-top:5px}
+
+.badge{
+background:#eee;
+padding:6px 10px;
+border-radius:6px;
+display:inline-block;
+margin-top:5px
+}
+
+/* PREMIUM CARDS */
+.card{
+background:#f9fafc;
+padding:15px;
+border-radius:10px;
+margin-top:15px;
+box-shadow:0 2px 6px rgba(0,0,0,0.05);
+}
+
+label{
+font-size:13px;
+color:#555;
+margin-top:10px;
+display:block;
+}
 </style>
 </head>
 
@@ -41,12 +121,20 @@ button{width:100%;padding:12px;margin-top:10px;background:#FF6600;color:#fff;bor
 
 <!-- ADMIN -->
 <div class="container hidden" id="adminPage">
-<h3>Create Shipment</h3>
 
-<input id="code" placeholder="Tracking Code (Auto)" readonly>
-<input id="from" placeholder="From">
-<input id="to" placeholder="To">
+<div class="card">
+<h3>Shipment Details</h3>
 
+<label>Tracking Code</label>
+<input id="code" placeholder="Auto generated" readonly>
+
+<label>From</label>
+<input id="from">
+
+<label>To</label>
+<input id="to">
+
+<label>Status</label>
 <select id="status">
 <option>In transit</option>
 <option>Out for delivery</option>
@@ -54,14 +142,30 @@ button{width:100%;padding:12px;margin-top:10px;background:#FF6600;color:#fff;bor
 <option>Delayed</option>
 </select>
 
+<label>Timeline</label>
 <textarea id="history" placeholder="Comma separated timeline"></textarea>
+</div>
 
-<input id="receiverName" placeholder="Receiver Name">
-<input id="receiverAddress" placeholder="Receiver Address">
-<input id="receiverPhone" placeholder="Phone">
+<div class="card">
+<h3>Receiver Details</h3>
 
-<button onclick="save()">Save</button>
+<label>Name</label>
+<input id="receiverName">
+
+<label>Address</label>
+<input id="receiverAddress">
+
+<label>Email</label>
+<input id="receiverEmail">
+
+<label>Phone</label>
+<input id="receiverPhone">
+</div>
+
+<button onclick="save()">Save Shipment</button>
+
 <div id="list"></div>
+
 <button onclick="back()">⬅ Back</button>
 </div>
 
@@ -79,12 +183,10 @@ projectId:"fedex-tracking-system"
 });
 const db = getFirestore(app);
 
-// AUTO CODE
 function generateCode(){
 return "GLO" + Math.floor(10000 + Math.random()*90000);
 }
 
-// ETA CALCULATION (adds 2 days)
 function getETA(){
 let d = new Date();
 d.setDate(d.getDate()+2);
@@ -126,64 +228,21 @@ ${d.manualHistory?.join("<br>")}
 <iframe width="100%" height="220" style="border-radius:10px;margin-top:10px"
 src="https://maps.google.com/maps?q=${encodeURIComponent(d.from)} to ${encodeURIComponent(d.to)}&output=embed"></iframe>
 
-<p><b>${d.receiverName}</b></p>
+<br>
+
+<b>Receiver</b>
+<p>${d.receiverName}</p>
 <p>${d.receiverAddress}</p>
+<p>${d.receiverEmail || ""}</p>
+<p>${d.receiverPhone}</p>
 
 <button onclick="downloadPDF('${code}')">Download Receipt</button>
 `;
 };
 
-// PDF WITH QR
-window.downloadPDF = async (code)=>{
-const { jsPDF } = window.jspdf;
-let snap = await getDoc(doc(db,"shipments",code));
-let d = snap.data();
-
-let pdf = new jsPDF();
-
-// HEADER
-pdf.setFillColor(77,20,140);
-pdf.rect(0,0,210,30,"F");
-pdf.setTextColor(255,255,255);
-pdf.text("GlobeX Logistics",15,20);
-
-// BODY
-pdf.setTextColor(0,0,0);
-pdf.text("Tracking: "+code,20,50);
-pdf.text("From: "+d.from,20,60);
-pdf.text("To: "+d.to,20,70);
-pdf.text("ETA: "+d.eta,20,80);
-
-// QR
-let qrDiv = document.createElement("div");
-new QRCode(qrDiv,{text:location.href,width:80,height:80});
-let img = qrDiv.querySelector("img").src;
-pdf.addImage(img,"PNG",150,40,40,40);
-
-// WATERMARK
-pdf.setTextColor(200,200,200);
-pdf.setFontSize(40);
-pdf.text("SAMPLE",60,150,{angle:45});
-
-pdf.save(code+".pdf");
-};
-
-// ADMIN
-window.openAdmin=()=>{
-trackPage.classList.add("hidden");
-loginPage.classList.remove("hidden");
-};
-
-window.login=()=>{
-if(pass.value==="admin123"){
-loginPage.classList.add("hidden");
-adminPage.classList.remove("hidden");
-load();
-}else alert("Wrong password");
-};
-
 // SAVE
 window.save=async()=>{
+
 if(!from.value || !to.value){
 alert("Fill required fields");
 return;
@@ -196,9 +255,10 @@ from: from.value,
 to: to.value,
 status: status.value,
 eta: getETA(),
-manualHistory: history.value.split(","),
+manualHistory: history.value ? history.value.split(",") : [],
 receiverName: receiverName.value,
 receiverAddress: receiverAddress.value,
+receiverEmail: receiverEmail.value,
 receiverPhone: receiverPhone.value
 });
 
@@ -213,7 +273,9 @@ async function load(){
 let snap = await getDocs(collection(db,"shipments"));
 let html="";
 snap.forEach(d=>{
-html+=`<div>${d.id} <button onclick="del('${d.id}')">Delete</button></div>`;
+html+=`<div class="card">${d.id}
+<button onclick="del('${d.id}')">Delete</button>
+</div>`;
 });
 list.innerHTML=html;
 }
@@ -224,7 +286,20 @@ await deleteDoc(doc(db,"shipments",id));
 load();
 };
 
-// BACK
+// ADMIN NAV
+window.openAdmin=()=>{
+trackPage.classList.add("hidden");
+loginPage.classList.remove("hidden");
+};
+
+window.login=()=>{
+if(pass.value==="admin123"){
+loginPage.classList.add("hidden");
+adminPage.classList.remove("hidden");
+load();
+}else alert("Wrong password");
+};
+
 window.back=()=>{
 adminPage.classList.add("hidden");
 trackPage.classList.remove("hidden");
