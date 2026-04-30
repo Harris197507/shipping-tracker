@@ -5,93 +5,49 @@
 <title>GlobeX Logistics PRO</title>
 
 <style>
-body {
+body{
   margin:0;
   font-family:Segoe UI;
   background: radial-gradient(circle at top,#6a1b9a,#1a0033);
   color:#fff;
 }
 
-/* HEADER */
-.header {
+.header{
   padding:18px;
   text-align:center;
   font-size:22px;
   font-weight:bold;
   background:rgba(255,255,255,0.08);
   backdrop-filter:blur(12px);
-  box-shadow:0 10px 30px rgba(0,0,0,0.5);
 }
 
-/* CARD */
-.card {
+.card{
   max-width:650px;
   margin:20px auto;
   padding:20px;
   border-radius:20px;
   background:rgba(255,255,255,0.08);
-  backdrop-filter:blur(15px);
-  box-shadow:0 20px 40px rgba(0,0,0,0.5);
 }
 
-/* INPUT */
-input, textarea {
+input, textarea{
   width:100%;
   padding:14px;
   margin-top:10px;
-  border-radius:12px;
+  border-radius:10px;
   border:none;
-  background:rgba(255,255,255,0.15);
-  color:#fff;
 }
 
-/* BUTTON */
-button {
+button{
   width:100%;
   padding:14px;
   margin-top:12px;
   border:none;
-  border-radius:12px;
-  background:linear-gradient(145deg,#ff7b00,#ff3d00);
-  color:#fff;
-  font-weight:bold;
-}
-
-/* STATUS */
-.status {
-  padding:12px;
-  border-radius:12px;
-  text-align:center;
-  background:orange;
-  margin-top:10px;
-}
-
-/* PROGRESS */
-.progress {
-  height:10px;
-  background:#333;
   border-radius:10px;
-  overflow:hidden;
-  margin:10px 0;
-}
-.progress-inner {
-  height:100%;
-  width:70%;
-  background:linear-gradient(90deg,#00e676,#00c853);
+  background:orange;
+  color:white;
 }
 
-/* TRUCK */
-.truck {
-  font-size:24px;
-  animation:move 4s linear infinite;
-}
-@keyframes move {
-  0%{transform:translateX(-50px);}
-  100%{transform:translateX(250px);}
-}
-
-.hidden { display:none; }
-
+.hidden{display:none;}
 </style>
 </head>
 
@@ -115,6 +71,7 @@ button {
 
 <!-- ADMIN -->
 <div id="adminPage" class="card hidden">
+
 <h3>Create Shipment</h3>
 
 <input id="from" placeholder="From">
@@ -130,6 +87,7 @@ button {
 
 <button onclick="save()">Save Shipment</button>
 <button onclick="logout()">Logout</button>
+
 </div>
 
 <!-- RESULT -->
@@ -137,11 +95,12 @@ button {
 
 <script type="module">
 
+// 🔥 Firebase Imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-/* FIREBASE CONFIG */
+// 🔥 Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
   authDomain: "globaltrackingsystem-f14c2.firebaseapp.com",
@@ -151,96 +110,79 @@ const firebaseConfig = {
   appId: "1:199571170052:web:d8bf1b09c17016979f6651"
 };
 
+// Init
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-/* LOGIN */
+// Elements
+const loginPage = document.getElementById("loginPage");
+const adminPage = document.getElementById("adminPage");
+const result = document.getElementById("result");
+
+// LOGIN
 window.login = async () => {
   try {
-    const userCred = await signInWithEmailAndPassword(
+    const cred = await signInWithEmailAndPassword(
       auth,
-      email.value.trim(),
-      password.value.trim()
+      document.getElementById("email").value.trim(),
+      document.getElementById("password").value.trim()
     );
 
-    const user = userCred.user;
-
-    // 🔐 ADMIN ONLY ACCESS
-    if (user.email !== "admin@globex.com") {
-      alert("❌ Access denied. Admin only.");
+    if (cred.user.email !== "admin@globex.com") {
+      alert("❌ Admin only");
       await signOut(auth);
       return;
     }
 
-    // ✅ SUCCESS LOGIN
-    alert("✅ Welcome Admin");
-
     loginPage.classList.add("hidden");
     adminPage.classList.remove("hidden");
+    alert("✅ Logged in");
 
   } catch (e) {
-    alert("❌ Login failed: " + e.message);
+    alert("❌ " + e.message);
   }
 };
 
-/* LOGOUT */
-window.logout = async () => {
+// LOGOUT
+window.logout = async ()=>{
   await signOut(auth);
   location.reload();
 };
 
-/* GENERATE CODE */
-function generateCode(){
-  return "GLO" + Math.floor(100000 + Math.random()*900000);
+// GENERATE CODE
+function gen(){
+  return "GLO"+Math.floor(100000+Math.random()*900000);
 }
 
-/* SAVE */
-window.save = async () => {
+// SAVE
+window.save = async ()=>{
+  let code = gen();
 
-  if(!from.value || !to.value){
-    alert("Fill required fields");
-    return;
-  }
+  await setDoc(doc(db,"shipments",code),{
+    from: from.value,
+    to: to.value,
+    status: status.value || "In transit",
+    history: history.value 
+      ? history.value.split(",").map(x=>x.trim())
+      : [],
+    receiverName: receiverName.value,
+    receiverAddress: receiverAddress.value,
+    receiverEmail: receiverEmail.value,
+    receiverPhone: receiverPhone.value
+  });
 
-  let code = generateCode();
-
-  try {
-    await setDoc(doc(db,"shipments",code),{
-      from: from.value,
-      to: to.value,
-      status: status.value || "In transit",
-      eta: new Date().toDateString(),
-      history: history.value
-        ? history.value.split(",").map(x=>x.trim())
-        : [],
-      receiverName: receiverName.value,
-      receiverAddress: receiverAddress.value,
-      receiverEmail: receiverEmail.value,
-      receiverPhone: receiverPhone.value
-    });
-
-    alert("✅ Saved: " + code);
-
-  } catch(err){
-    alert("❌ " + err.message);
-  }
+  alert("Saved: "+code);
 };
 
-/* TRACK */
-window.track = async () => {
-
+// TRACK
+window.track = async ()=>{
   let id = trackInput.value.trim();
-
-  if(!id){
-    alert("Enter tracking code");
-    return;
-  }
 
   let snap = await getDoc(doc(db,"shipments",id));
 
   if(!snap.exists()){
-    alert("❌ Not found");
+    alert("Not found");
     return;
   }
 
@@ -249,32 +191,12 @@ window.track = async () => {
   result.classList.remove("hidden");
 
   result.innerHTML = `
-    <h2>${id}</h2>
-
-    <div class="status">${d.status}</div>
-
-    <div class="progress">
-      <div class="progress-inner"></div>
-    </div>
-
-    <div class="truck">🚚</div>
-
-    <p><b>ETA:</b> ${d.eta}</p>
+    <h3>${id}</h3>
+    <p><b>Status:</b> ${d.status}</p>
     <p><b>From:</b> ${d.from}</p>
     <p><b>To:</b> ${d.to}</p>
-
-    <h3>Timeline</h3>
-    ${(d.history || []).map(x => `<p>📦 ${x}</p>`).join("")}
-
-    <h3>Receiver</h3>
-    <p>${d.receiverName}</p>
+    <p><b>Receiver:</b> ${d.receiverName}</p>
     <p>${d.receiverAddress}</p>
-    <p>${d.receiverEmail}</p>
-    <p>${d.receiverPhone}</p>
-
-    <iframe width="100%" height="200"
-      src="https://maps.google.com/maps?q=${encodeURIComponent(d.to)}&output=embed">
-    </iframe>
   `;
 };
 
