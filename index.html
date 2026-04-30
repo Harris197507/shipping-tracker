@@ -4,69 +4,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GlobeX Logistics</title>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
 <style>
-body{font-family:Arial;margin:0;background:#f4f6f9}
-
-.header{
-background:linear-gradient(90deg,#4D148C,#FF6600);
-color:#fff;
-padding:20px;
-text-align:center;
-font-weight:bold;
-}
-
-.container{
-max-width:500px;
-margin:20px auto;
-background:#fff;
-padding:20px;
-border-radius:12px;
-}
-
-input,select,textarea{
-width:100%;
-padding:12px;
-margin-top:10px;
-border-radius:8px;
-border:1px solid #ccc;
-}
-
-button{
-width:100%;
-padding:12px;
-margin-top:10px;
-background:#FF6600;
-color:#fff;
-border:none;
-border-radius:8px;
-font-weight:bold;
-}
-
+body{font-family:Segoe UI;margin:0;background:#eef2f7}
+.header{background:#4D148C;color:#fff;padding:18px;text-align:center;font-weight:bold}
+.container{max-width:650px;margin:20px auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 5px 15px rgba(0,0,0,0.1)}
+input,select,textarea{width:100%;padding:12px;margin-top:10px;border-radius:8px;border:1px solid #ccc}
+button{width:100%;padding:12px;margin-top:10px;background:#FF6600;color:#fff;border:none;border-radius:8px;font-weight:bold}
+.status{padding:10px;border-radius:8px;color:#fff;text-align:center;margin-bottom:10px}
+.timeline{border-left:4px solid #FF6600;padding-left:10px;margin-top:10px}
+.admin-btn{position:fixed;bottom:80px;right:20px;width:60px;height:60px;border-radius:50%;background:#4D148C;color:#fff;font-size:22px;border:none}
 .hidden{display:none}
-
-.admin-btn{
-position:fixed;
-bottom:80px;
-right:20px;
-width:60px;
-height:60px;
-border-radius:50%;
-background:#4D148C;
-color:#fff;
-font-size:22px;
-border:none;
-}
+.badge{background:#eee;padding:6px 10px;border-radius:6px;display:inline-block;margin-top:5px}
 </style>
 </head>
 
 <body>
 
-<div class="header">
-🌍 GlobeX Logistics ✈️  
-<p>International Freight • Secure Delivery • Verified Tracking</p>
-</div>
+<div class="header">🌍 GlobeX Logistics</div>
 
-<!-- TRACK PAGE -->
+<!-- TRACK -->
 <div class="container" id="trackPage">
 <input id="trackInput" placeholder="Enter tracking code">
 <button onclick="track()">Track Shipment</button>
@@ -75,14 +34,14 @@ border:none;
 
 <!-- LOGIN -->
 <div class="container hidden" id="loginPage">
-<h2>Admin Login 🔐</h2>
+<h3>Admin Login</h3>
 <input id="pass" placeholder="Password">
 <button onclick="login()">Login</button>
 </div>
 
 <!-- ADMIN -->
 <div class="container hidden" id="adminPage">
-<h2>Create Shipment</h2>
+<h3>Create Shipment</h3>
 
 <input id="code" placeholder="Tracking Code (Auto)" readonly>
 <input id="from" placeholder="From">
@@ -97,21 +56,19 @@ border:none;
 
 <textarea id="history" placeholder="Comma separated timeline"></textarea>
 
-<h3>Receiver</h3>
-<input id="receiverName" placeholder="Name">
-<input id="receiverAddress" placeholder="Address">
+<input id="receiverName" placeholder="Receiver Name">
+<input id="receiverAddress" placeholder="Receiver Address">
 <input id="receiverPhone" placeholder="Phone">
 
 <button onclick="save()">Save</button>
-
 <div id="list"></div>
-
-<button onclick="goBack()">⬅ Back</button>
+<button onclick="back()">⬅ Back</button>
 </div>
 
 <button class="admin-btn" onclick="openAdmin()">⚙️</button>
 
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, getDocs, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -122,16 +79,21 @@ projectId:"fedex-tracking-system"
 });
 const db = getFirestore(app);
 
+// AUTO CODE
 function generateCode(){
-const num = Math.floor(10000 + Math.random() * 90000);
-return "GLO" + num;
+return "GLO" + Math.floor(10000 + Math.random()*90000);
+}
+
+// ETA CALCULATION (adds 2 days)
+function getETA(){
+let d = new Date();
+d.setDate(d.getDate()+2);
+return d.toDateString();
 }
 
 // TRACK
 window.track = async ()=>{
-let code = document.getElementById("trackInput").value.trim();
-if(!code) return;
-
+let code = trackInput.value.trim();
 let snap = await getDoc(doc(db,"shipments",code));
 
 if(!snap.exists()){
@@ -141,34 +103,87 @@ return;
 
 let d = snap.data();
 
+let color="#ff9800";
+if(d.status==="Delivered") color="#28a745";
+if(d.status==="Delayed") color="#dc3545";
+
 result.innerHTML = `
 <h3>${code}</h3>
-<p>Status: ${d.status}</p>
-<p>From: ${d.from}</p>
-<p>To: ${d.to}</p>
-<p>${d.manualHistory?.join("<br>") || ""}</p>
+
+<div class="status" style="background:${color}">
+${d.status}
+</div>
+
+<div class="badge">Estimated Delivery: ${d.eta}</div>
+
+<p><b>From:</b> ${d.from}</p>
+<p><b>To:</b> ${d.to}</p>
+
+<div class="timeline">
+${d.manualHistory?.join("<br>")}
+</div>
+
+<iframe width="100%" height="220" style="border-radius:10px;margin-top:10px"
+src="https://maps.google.com/maps?q=${encodeURIComponent(d.from)} to ${encodeURIComponent(d.to)}&output=embed"></iframe>
+
 <p><b>${d.receiverName}</b></p>
+<p>${d.receiverAddress}</p>
+
+<button onclick="downloadPDF('${code}')">Download Receipt</button>
 `;
 };
 
-// ADMIN OPEN
-window.openAdmin = ()=>{
-document.getElementById("trackPage").classList.add("hidden");
-document.getElementById("loginPage").classList.remove("hidden");
+// PDF WITH QR
+window.downloadPDF = async (code)=>{
+const { jsPDF } = window.jspdf;
+let snap = await getDoc(doc(db,"shipments",code));
+let d = snap.data();
+
+let pdf = new jsPDF();
+
+// HEADER
+pdf.setFillColor(77,20,140);
+pdf.rect(0,0,210,30,"F");
+pdf.setTextColor(255,255,255);
+pdf.text("GlobeX Logistics",15,20);
+
+// BODY
+pdf.setTextColor(0,0,0);
+pdf.text("Tracking: "+code,20,50);
+pdf.text("From: "+d.from,20,60);
+pdf.text("To: "+d.to,20,70);
+pdf.text("ETA: "+d.eta,20,80);
+
+// QR
+let qrDiv = document.createElement("div");
+new QRCode(qrDiv,{text:location.href,width:80,height:80});
+let img = qrDiv.querySelector("img").src;
+pdf.addImage(img,"PNG",150,40,40,40);
+
+// WATERMARK
+pdf.setTextColor(200,200,200);
+pdf.setFontSize(40);
+pdf.text("SAMPLE",60,150,{angle:45});
+
+pdf.save(code+".pdf");
 };
 
-// LOGIN
-window.login = ()=>{
-if(document.getElementById("pass").value==="admin123"){
-document.getElementById("loginPage").classList.add("hidden");
-document.getElementById("adminPage").classList.remove("hidden");
+// ADMIN
+window.openAdmin=()=>{
+trackPage.classList.add("hidden");
+loginPage.classList.remove("hidden");
+};
+
+window.login=()=>{
+if(pass.value==="admin123"){
+loginPage.classList.add("hidden");
+adminPage.classList.remove("hidden");
 load();
 }else alert("Wrong password");
 };
 
 // SAVE
-window.save = async ()=>{
-
+window.save=async()=>{
 if(!from.value || !to.value){
 alert("Fill required fields");
 return;
@@ -177,10 +192,11 @@ return;
 let trackingCode = code.value || generateCode();
 
 await setDoc(doc(db,"shipments",trackingCode),{
-from: from.value.trim(),
-to: to.value.trim(),
+from: from.value,
+to: to.value,
 status: status.value,
-manualHistory: history.value ? history.value.split(",") : [],
+eta: getETA(),
+manualHistory: history.value.split(","),
 receiverName: receiverName.value,
 receiverAddress: receiverAddress.value,
 receiverPhone: receiverPhone.value
@@ -197,23 +213,21 @@ async function load(){
 let snap = await getDocs(collection(db,"shipments"));
 let html="";
 snap.forEach(d=>{
-html += `<div>${d.id} 
-<button onclick="delItem('${d.id}')">Delete</button>
-</div>`;
+html+=`<div>${d.id} <button onclick="del('${d.id}')">Delete</button></div>`;
 });
-list.innerHTML = html;
+list.innerHTML=html;
 }
 
 // DELETE
-window.delItem = async(id)=>{
+window.del=async(id)=>{
 await deleteDoc(doc(db,"shipments",id));
 load();
 };
 
 // BACK
-window.goBack = ()=>{
-document.getElementById("adminPage").classList.add("hidden");
-document.getElementById("trackPage").classList.remove("hidden");
+window.back=()=>{
+adminPage.classList.add("hidden");
+trackPage.classList.remove("hidden");
 };
 
 </script>
