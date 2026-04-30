@@ -2,9 +2,8 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GlobeX Logistics</title>
+<title>GlobeX Logistics PRO</title>
 
-<!-- MAP -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -13,24 +12,24 @@ body{
   margin:0;
   font-family:-apple-system, sans-serif;
   background:#0f172a;
-  color:#fff;
+  color:white;
 }
 
 .header{
-  padding:15px;
   text-align:center;
+  padding:15px;
   font-weight:600;
   background:#111827;
 }
 
 .card{
-  background:#111827;
   margin:15px;
   padding:15px;
+  background:#111827;
   border-radius:15px;
 }
 
-input,textarea{
+input, textarea{
   width:100%;
   padding:12px;
   margin-top:10px;
@@ -57,8 +56,8 @@ button{
 }
 
 .progress-bar{
-  background:#22c55e;
   height:10px;
+  background:#22c55e;
 }
 
 .timeline .step{
@@ -67,7 +66,7 @@ button{
   margin-top:6px;
 }
 
-.timeline .done{
+.done{
   border-color:#22c55e;
 }
 
@@ -77,19 +76,18 @@ button{
 
 <body>
 
-<div class="header">🌍 GlobeX Logistics</div>
+<div class="header">🌍 GlobeX Logistics PRO</div>
 
-<!-- ADMIN LOGIN -->
+<!-- ADMIN -->
 <div class="card">
-<h3>Admin Code</h3>
-<input id="adminCode">
-<button id="adminBtn">Enter</button>
+<input id="adminCode" placeholder="Enter Admin Code">
+<button onclick="openAdmin()">Enter</button>
 </div>
 
 <!-- TRACK -->
 <div class="card">
-<input id="trackInput" placeholder="Tracking Code">
-<button id="trackBtn">Track</button>
+<input id="trackInput" placeholder="Enter Tracking Code">
+<button onclick="track()">Track Shipment</button>
 </div>
 
 <!-- ADMIN PANEL -->
@@ -99,13 +97,14 @@ button{
 
 <input id="from" placeholder="From">
 <input id="to" placeholder="To">
-<input id="status" placeholder="Status">
+<input id="status" placeholder="Status (In transit)">
 <textarea id="history" placeholder="Timeline (comma separated)"></textarea>
 
+<h4>Receiver</h4>
 <input id="receiverName" placeholder="Name">
 <input id="receiverAddress" placeholder="Address">
 
-<button id="saveBtn">Save Shipment</button>
+<button onclick="save()">Save Shipment</button>
 
 <h3>📦 Shipments</h3>
 <div id="list"></div>
@@ -121,7 +120,7 @@ button{
 
 <script>
 
-// CONFIG
+// 🔥 YOUR FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
   authDomain: "globaltrackingsystem-f14c2.firebaseapp.com",
@@ -131,16 +130,18 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ADMIN
-document.getElementById("adminBtn").onclick = ()=>{
+// 🔐 ADMIN ACCESS
+function openAdmin(){
   if(adminCode.value.trim() === "admin1234"){
     adminPage.classList.remove("hidden");
     loadList();
-  }else alert("Wrong code");
-};
+  }else{
+    alert("Wrong admin code");
+  }
+}
 
-// SAVE
-document.getElementById("saveBtn").onclick = async ()=>{
+// 💾 SAVE SHIPMENT
+async function save(){
 
   try{
     const code = "GLO"+Math.floor(100000+Math.random()*900000);
@@ -149,31 +150,37 @@ document.getElementById("saveBtn").onclick = async ()=>{
       from: from.value,
       to: to.value,
       status: status.value || "In transit",
-      history: history.value.split(",").map(x=>x.trim()),
+      history: history.value ? history.value.split(",").map(x=>x.trim()) : [],
       receiverName: receiverName.value,
       receiverAddress: receiverAddress.value
     });
 
-    alert("Saved: " + code);
+    alert("✅ Saved: " + code);
+
     loadList();
 
   }catch(e){
     alert(e.message);
   }
-};
+}
 
-// LOAD LIST
+// 📦 LOAD LIST
 function loadList(){
 
   db.collection("shipments").onSnapshot(snap=>{
+
     list.innerHTML = "";
 
     snap.forEach(doc=>{
       let d = doc.data();
 
       list.innerHTML += `
-        <div>
-          <b>${doc.id}</b> - ${d.from} → ${d.to}
+        <div style="margin-bottom:10px;">
+          <b>${doc.id}</b><br>
+          ${d.from || "-"} → ${d.to || "-"}<br>
+          👤 ${d.receiverName || "No name"}<br>
+          📍 ${d.receiverAddress || "No address"}
+
           <button onclick="del('${doc.id}')">Delete</button>
         </div>
       `;
@@ -182,20 +189,20 @@ function loadList(){
   });
 }
 
-// DELETE
-window.del = async (id)=>{
+// ❌ DELETE
+async function del(id){
   await db.collection("shipments").doc(id).delete();
-};
+}
 
-// TRACK
-document.getElementById("trackBtn").onclick = async ()=>{
+// 📍 TRACK
+async function track(){
 
   let code = trackInput.value.trim();
 
   let snap = await db.collection("shipments").doc(code).get();
 
   if(!snap.exists){
-    alert("Not found");
+    alert("Tracking not found");
     return;
   }
 
@@ -214,6 +221,11 @@ document.getElementById("trackBtn").onclick = async ()=>{
 
     <p>${d.from} → ${d.to}</p>
 
+    <p><b>${d.status}</b></p>
+
+    <p>👤 ${d.receiverName}</p>
+    <p>📍 ${d.receiverAddress}</p>
+
     <div id="map" style="height:200px;margin:10px 0;"></div>
 
     <div class="timeline">
@@ -225,17 +237,17 @@ document.getElementById("trackBtn").onclick = async ()=>{
     </div>
   `;
 
-  // MAP
+  // 🌍 MAP
   let map = L.map('map').setView([10,10],2);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-  let fromCoords = [31.2304,121.4737];
-  let toCoords = [14.5995,120.9842];
+  let fromCoords = [31.2304,121.4737]; // Shanghai
+  let toCoords = [14.5995,120.9842];   // Manila
 
   let line = L.polyline([fromCoords,toCoords]).addTo(map);
   map.fitBounds(line.getBounds());
-};
+}
 
 </script>
 
