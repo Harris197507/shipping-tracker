@@ -2,92 +2,68 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GlobeX Logistics PRO</title>
+<title>GlobeX Logistics</title>
 
 <style>
 body{
-  margin:0;
-  font-family:Segoe UI;
-  background: radial-gradient(circle at top,#6a1b9a,#1a0033);
-  color:#fff;
-}
-
-.header{
-  padding:18px;
-  text-align:center;
-  font-size:22px;
-  font-weight:bold;
-  background:rgba(255,255,255,0.08);
-  backdrop-filter:blur(12px);
-}
-
-.card{
-  max-width:650px;
-  margin:20px auto;
+  font-family:Arial;
+  background:#1a0033;
+  color:white;
   padding:20px;
-  border-radius:20px;
-  background:rgba(255,255,255,0.08);
 }
-
-input, textarea{
-  width:100%;
-  padding:14px;
-  margin-top:10px;
+.card{
+  background:#fff;
+  color:#000;
+  padding:15px;
   border-radius:10px;
-  border:none;
+  margin-top:15px;
 }
-
+input,textarea{
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+}
 button{
   width:100%;
-  padding:14px;
-  margin-top:12px;
-  border:none;
-  border-radius:10px;
+  padding:12px;
+  margin-top:10px;
   background:orange;
+  border:none;
   color:white;
 }
-
 .hidden{display:none;}
 </style>
 </head>
 
 <body>
 
-<div class="header">🌍 GlobeX Logistics PRO</div>
+<h2>🌍 GlobeX Logistics</h2>
 
-<!-- LOGIN -->
-<div id="loginPage" class="card">
-<h3>Admin Login</h3>
-<input id="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
-<button onclick="login()">Login</button>
+<!-- ADMIN ACCESS -->
+<div class="card">
+<h3>Enter Admin Code</h3>
+<input id="adminCode" placeholder="Enter admin code">
+<button onclick="openAdmin()">Enter</button>
 </div>
 
 <!-- TRACK -->
 <div class="card">
 <input id="trackInput" placeholder="Enter Tracking Code">
-<button onclick="track()">Track Shipment</button>
+<button onclick="track()">Track</button>
 </div>
 
 <!-- ADMIN -->
 <div id="adminPage" class="card hidden">
-
 <h3>Create Shipment</h3>
 
 <input id="from" placeholder="From">
 <input id="to" placeholder="To">
-<input id="status" placeholder="Status (In transit)">
-<textarea id="history" placeholder="Timeline (comma separated)"></textarea>
+<textarea id="history" placeholder="Timeline"></textarea>
 
-<h4>Receiver</h4>
 <input id="receiverName" placeholder="Name">
 <input id="receiverAddress" placeholder="Address">
-<input id="receiverEmail" placeholder="Email">
-<input id="receiverPhone" placeholder="Phone">
 
-<button onclick="save()">Save Shipment</button>
-<button onclick="logout()">Logout</button>
-
+<button onclick="save()">Save</button>
 </div>
 
 <!-- RESULT -->
@@ -95,91 +71,47 @@ button{
 
 <script type="module">
 
-// 🔥 Firebase Imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-// 🔥 Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
   authDomain: "globaltrackingsystem-f14c2.firebaseapp.com",
-  projectId: "globaltrackingsystem-f14c2",
-  storageBucket: "globaltrackingsystem-f14c2.appspot.com",
-  messagingSenderId: "199571170052",
-  appId: "1:199571170052:web:d8bf1b09c17016979f6651"
+  projectId: "globaltrackingsystem-f14c2"
 };
 
-// Init
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const auth = getAuth(app);
 
-// Elements
-const loginPage = document.getElementById("loginPage");
-const adminPage = document.getElementById("adminPage");
-const result = document.getElementById("result");
+/* ADMIN CODE (CHANGE THIS) */
+const ADMIN = "1234";
 
-// LOGIN
-window.login = async () => {
-  try {
-    const cred = await signInWithEmailAndPassword(
-      auth,
-      document.getElementById("email").value.trim(),
-      document.getElementById("password").value.trim()
-    );
-
-    if (cred.user.email !== "admin@globex.com") {
-      alert("❌ Admin only");
-      await signOut(auth);
-      return;
-    }
-
-    loginPage.classList.add("hidden");
+window.openAdmin = () => {
+  if(adminCode.value === ADMIN){
     adminPage.classList.remove("hidden");
-    alert("✅ Logged in");
-
-  } catch (e) {
-    alert("❌ " + e.message);
+  } else {
+    alert("Wrong code");
   }
 };
 
-// LOGOUT
-window.logout = async ()=>{
-  await signOut(auth);
-  location.reload();
-};
-
-// GENERATE CODE
-function gen(){
-  return "GLO"+Math.floor(100000+Math.random()*900000);
-}
-
-// SAVE
+/* SAVE */
 window.save = async ()=>{
-  let code = gen();
+  let code = "GLO"+Math.floor(100000+Math.random()*900000);
 
   await setDoc(doc(db,"shipments",code),{
     from: from.value,
     to: to.value,
-    status: status.value || "In transit",
-    history: history.value 
-      ? history.value.split(",").map(x=>x.trim())
-      : [],
+    history: history.value.split(","),
     receiverName: receiverName.value,
-    receiverAddress: receiverAddress.value,
-    receiverEmail: receiverEmail.value,
-    receiverPhone: receiverPhone.value
+    receiverAddress: receiverAddress.value
   });
 
   alert("Saved: "+code);
 };
 
-// TRACK
+/* TRACK */
 window.track = async ()=>{
-  let id = trackInput.value.trim();
-
-  let snap = await getDoc(doc(db,"shipments",id));
+  let snap = await getDoc(doc(db,"shipments",trackInput.value));
 
   if(!snap.exists()){
     alert("Not found");
@@ -191,12 +123,10 @@ window.track = async ()=>{
   result.classList.remove("hidden");
 
   result.innerHTML = `
-    <h3>${id}</h3>
-    <p><b>Status:</b> ${d.status}</p>
-    <p><b>From:</b> ${d.from}</p>
-    <p><b>To:</b> ${d.to}</p>
-    <p><b>Receiver:</b> ${d.receiverName}</p>
-    <p>${d.receiverAddress}</p>
+    <h3>${trackInput.value}</h3>
+    <p>${d.from} → ${d.to}</p>
+    <p>${d.history.join("<br>")}</p>
+    <p>${d.receiverName}</p>
   `;
 };
 
