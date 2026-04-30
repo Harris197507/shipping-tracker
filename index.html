@@ -99,75 +99,82 @@ button{
 <!-- RESULT -->
 <div id="result" class="card hidden"></div>
 
-<script type="module">
+<!-- 🔥 FIXED SCRIPT (NO MODULE) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+<script>
+
+// 🔥 CONFIRM SCRIPT RUNNING
+console.log("JS LOADED");
 
 /* FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
   authDomain: "globaltrackingsystem-f14c2.firebaseapp.com",
-  projectId: "globaltrackingsystem-f14c2",
+  projectId: "globaltrackingsystem-f14c2"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 /* ADMIN CODE */
 const ADMIN = "admin1234";
 
 /* ADMIN LOGIN */
-window.openAdmin = () => {
+function openAdmin(){
   console.log("clicked");
 
-  if(adminCode.value.trim() === ADMIN){
-    adminPage.classList.remove("hidden");
+  let codeInput = document.getElementById("adminCode").value.trim();
+
+  if(codeInput === ADMIN){
+    document.getElementById("adminPage").classList.remove("hidden");
     alert("✅ Access granted");
   } else {
     alert("❌ Wrong code");
   }
-};
+}
 
 /* SAVE */
-window.save = async () => {
+async function save(){
 
   let trackingCode = "GLO"+Math.floor(100000+Math.random()*900000);
 
-  await setDoc(doc(db,"shipments",trackingCode),{
-    from: from.value,
-    to: to.value,
-    status: status.value || "In transit",
-    history: history.value 
-      ? history.value.split(",").map(x=>x.trim())
+  await db.collection("shipments").doc(trackingCode).set({
+    from: document.getElementById("from").value,
+    to: document.getElementById("to").value,
+    status: document.getElementById("status").value || "In transit",
+    history: document.getElementById("history").value
+      ? document.getElementById("history").value.split(",").map(x=>x.trim())
       : [],
-    receiverName: receiverName.value,
-    receiverAddress: receiverAddress.value,
-    receiverEmail: receiverEmail.value,
-    receiverPhone: receiverPhone.value,
+    receiverName: document.getElementById("receiverName").value,
+    receiverAddress: document.getElementById("receiverAddress").value,
+    receiverEmail: document.getElementById("receiverEmail").value,
+    receiverPhone: document.getElementById("receiverPhone").value,
     date: new Date().toDateString()
   });
 
-  alert("✅ Saved: "+trackingCode);
-};
+  alert("✅ Saved: " + trackingCode);
+}
 
 /* TRACK */
-window.track = async () => {
+async function track(){
 
-  let code = trackInput.value.trim();
+  let code = document.getElementById("trackInput").value.trim();
 
-  let snap = await getDoc(doc(db,"shipments",code));
+  let docRef = db.collection("shipments").doc(code);
+  let snap = await docRef.get();
 
-  if(!snap.exists()){
+  if(!snap.exists){
     alert("❌ Not found");
     return;
   }
 
   let d = snap.data();
 
-  result.classList.remove("hidden");
+  document.getElementById("result").classList.remove("hidden");
 
-  result.innerHTML = `
+  document.getElementById("result").innerHTML = `
     <h3>${code}</h3>
     <div class="status">${d.status}</div>
 
@@ -184,7 +191,7 @@ window.track = async () => {
     <p>${d.receiverEmail}</p>
     <p>${d.receiverPhone}</p>
   `;
-};
+}
 
 </script>
 
