@@ -2,44 +2,68 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GlobeX Logistics</title>
+<title>GlobeX Logistics PRO</title>
 
 <style>
 body{
+  margin:0;
   font-family:Arial;
-  background:#1a0033;
+  background:linear-gradient(135deg,#2b0057,#5a0dad);
   color:white;
+}
+
+.header{
   padding:20px;
+  font-size:22px;
+  font-weight:bold;
 }
+
 .card{
-  background:#fff;
-  color:#000;
-  padding:15px;
-  border-radius:10px;
-  margin-top:15px;
+  background:white;
+  color:black;
+  margin:20px;
+  padding:20px;
+  border-radius:15px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.3);
 }
+
 input,textarea{
-  width:100%;
-  padding:10px;
-  margin-top:10px;
-}
-button{
   width:100%;
   padding:12px;
   margin-top:10px;
-  background:orange;
-  border:none;
-  color:white;
+  border-radius:8px;
+  border:1px solid #ccc;
 }
+
+button{
+  width:100%;
+  padding:14px;
+  margin-top:15px;
+  background:linear-gradient(45deg,orange,#ff6600);
+  color:white;
+  border:none;
+  border-radius:10px;
+  font-weight:bold;
+}
+
 .hidden{display:none;}
+
+.status{
+  background:orange;
+  color:white;
+  padding:10px;
+  border-radius:8px;
+  text-align:center;
+  margin-top:10px;
+}
 </style>
 </head>
 
 <body>
 
-<h2>🌍 GlobeX Logistics</h2>
+<div class="header">🌍 GlobeX Logistics PRO</div>
 
-<!-- ADMIN ACCESS -->
+<!-- ADMIN LOGIN -->
 <div class="card">
 <h3>Enter Admin Code</h3>
 <input id="adminCode" placeholder="Enter admin code">
@@ -49,21 +73,27 @@ button{
 <!-- TRACK -->
 <div class="card">
 <input id="trackInput" placeholder="Enter Tracking Code">
-<button onclick="track()">Track</button>
+<button onclick="track()">Track Shipment</button>
 </div>
 
-<!-- ADMIN -->
+<!-- ADMIN PANEL -->
 <div id="adminPage" class="card hidden">
+
 <h3>Create Shipment</h3>
 
 <input id="from" placeholder="From">
 <input id="to" placeholder="To">
-<textarea id="history" placeholder="Timeline"></textarea>
+<input id="status" placeholder="Status (In transit)">
+<textarea id="history" placeholder="Timeline (comma separated)"></textarea>
 
+<h4>Receiver</h4>
 <input id="receiverName" placeholder="Name">
 <input id="receiverAddress" placeholder="Address">
+<input id="receiverEmail" placeholder="Email">
+<input id="receiverPhone" placeholder="Phone">
 
-<button onclick="save()">Save</button>
+<button onclick="save()">Save Shipment</button>
+
 </div>
 
 <!-- RESULT -->
@@ -74,47 +104,62 @@ button{
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+/* FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
   authDomain: "globaltrackingsystem-f14c2.firebaseapp.com",
-  projectId: "globaltrackingsystem-f14c2"
+  projectId: "globaltrackingsystem-f14c2",
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* ADMIN CODE (CHANGE THIS) */
-const ADMIN = "1234";
+/* ADMIN CODE */
+const ADMIN = "admin1234";
 
+/* ADMIN LOGIN */
 window.openAdmin = () => {
-  if(adminCode.value === ADMIN){
+  console.log("clicked");
+
+  if(adminCode.value.trim() === ADMIN){
     adminPage.classList.remove("hidden");
+    alert("✅ Access granted");
   } else {
-    alert("Wrong code");
+    alert("❌ Wrong code");
   }
 };
 
 /* SAVE */
-window.save = async ()=>{
-  let code = "GLO"+Math.floor(100000+Math.random()*900000);
+window.save = async () => {
 
-  await setDoc(doc(db,"shipments",code),{
+  let trackingCode = "GLO"+Math.floor(100000+Math.random()*900000);
+
+  await setDoc(doc(db,"shipments",trackingCode),{
     from: from.value,
     to: to.value,
-    history: history.value.split(","),
+    status: status.value || "In transit",
+    history: history.value 
+      ? history.value.split(",").map(x=>x.trim())
+      : [],
     receiverName: receiverName.value,
-    receiverAddress: receiverAddress.value
+    receiverAddress: receiverAddress.value,
+    receiverEmail: receiverEmail.value,
+    receiverPhone: receiverPhone.value,
+    date: new Date().toDateString()
   });
 
-  alert("Saved: "+code);
+  alert("✅ Saved: "+trackingCode);
 };
 
 /* TRACK */
-window.track = async ()=>{
-  let snap = await getDoc(doc(db,"shipments",trackInput.value));
+window.track = async () => {
+
+  let code = trackInput.value.trim();
+
+  let snap = await getDoc(doc(db,"shipments",code));
 
   if(!snap.exists()){
-    alert("Not found");
+    alert("❌ Not found");
     return;
   }
 
@@ -123,10 +168,21 @@ window.track = async ()=>{
   result.classList.remove("hidden");
 
   result.innerHTML = `
-    <h3>${trackInput.value}</h3>
-    <p>${d.from} → ${d.to}</p>
-    <p>${d.history.join("<br>")}</p>
+    <h3>${code}</h3>
+    <div class="status">${d.status}</div>
+
+    <p><b>From:</b> ${d.from}</p>
+    <p><b>To:</b> ${d.to}</p>
+    <p><b>ETA:</b> ${d.date}</p>
+
+    <h4>Tracking Timeline</h4>
+    ${d.history.map(h=>"<p>📦 "+h+"</p>").join("")}
+
+    <h4>Receiver</h4>
     <p>${d.receiverName}</p>
+    <p>${d.receiverAddress}</p>
+    <p>${d.receiverEmail}</p>
+    <p>${d.receiverPhone}</p>
   `;
 };
 
