@@ -83,7 +83,6 @@ display:inline-block;
 margin-top:5px
 }
 
-/* PREMIUM CARDS */
 .card{
 background:#f9fafc;
 padding:15px;
@@ -126,7 +125,7 @@ display:block;
 <h3>Shipment Details</h3>
 
 <label>Tracking Code</label>
-<input id="code" placeholder="Auto generated" readonly>
+<input id="code" readonly placeholder="Auto generated">
 
 <label>From</label>
 <input id="from">
@@ -183,10 +182,24 @@ projectId:"fedex-tracking-system"
 });
 const db = getFirestore(app);
 
+// ELEMENTS
+const code = document.getElementById("code");
+const from = document.getElementById("from");
+const to = document.getElementById("to");
+const status = document.getElementById("status");
+const history = document.getElementById("history");
+
+const receiverName = document.getElementById("receiverName");
+const receiverAddress = document.getElementById("receiverAddress");
+const receiverPhone = document.getElementById("receiverPhone");
+const receiverEmail = document.getElementById("receiverEmail");
+
+// GENERATE CODE
 function generateCode(){
 return "GLO" + Math.floor(10000 + Math.random()*90000);
 }
 
+// ETA
 function getETA(){
 let d = new Date();
 d.setDate(d.getDate()+2);
@@ -195,11 +208,11 @@ return d.toDateString();
 
 // TRACK
 window.track = async ()=>{
-let code = trackInput.value.trim();
-let snap = await getDoc(doc(db,"shipments",code));
+let input = document.getElementById("trackInput").value.trim();
+let snap = await getDoc(doc(db,"shipments",input));
 
 if(!snap.exists()){
-result.innerHTML="❌ Not found";
+document.getElementById("result").innerHTML="❌ Tracking not found";
 return;
 }
 
@@ -209,8 +222,8 @@ let color="#ff9800";
 if(d.status==="Delivered") color="#28a745";
 if(d.status==="Delayed") color="#dc3545";
 
-result.innerHTML = `
-<h3>${code}</h3>
+document.getElementById("result").innerHTML = `
+<h3>${input}</h3>
 
 <div class="status" style="background:${color}">
 ${d.status}
@@ -236,13 +249,44 @@ src="https://maps.google.com/maps?q=${encodeURIComponent(d.from)} to ${encodeURI
 <p>${d.receiverEmail || ""}</p>
 <p>${d.receiverPhone}</p>
 
-<button onclick="downloadPDF('${code}')">Download Receipt</button>
+<button onclick="downloadPDF('${input}')">Download Receipt</button>
 `;
 };
 
-// SAVE
-window.save=async()=>{
+// PDF
+window.downloadPDF = async (codeVal)=>{
+const { jsPDF } = window.jspdf;
+let snap = await getDoc(doc(db,"shipments",codeVal));
+let d = snap.data();
 
+let pdf = new jsPDF();
+
+pdf.setFillColor(77,20,140);
+pdf.rect(0,0,210,30,"F");
+
+pdf.setTextColor(255,255,255);
+pdf.text("GlobeX Logistics",15,20);
+
+pdf.setTextColor(0,0,0);
+pdf.text("Tracking: "+codeVal,20,50);
+pdf.text("From: "+d.from,20,60);
+pdf.text("To: "+d.to,20,70);
+pdf.text("ETA: "+d.eta,20,80);
+
+let qrDiv = document.createElement("div");
+new QRCode(qrDiv,{text:codeVal,width:80,height:80});
+let img = qrDiv.querySelector("img").src;
+pdf.addImage(img,"PNG",150,40,40,40);
+
+pdf.setTextColor(200,200,200);
+pdf.setFontSize(40);
+pdf.text("SAMPLE",60,150,{angle:45});
+
+pdf.save(codeVal+".pdf");
+};
+
+// SAVE
+window.save = async ()=>{
 if(!from.value || !to.value){
 alert("Fill required fields");
 return;
@@ -251,20 +295,19 @@ return;
 let trackingCode = code.value || generateCode();
 
 await setDoc(doc(db,"shipments",trackingCode),{
-from: from.value,
-to: to.value,
+from: from.value.trim(),
+to: to.value.trim(),
 status: status.value,
 eta: getETA(),
-manualHistory: history.value ? history.value.split(",") : [],
-receiverName: receiverName.value,
-receiverAddress: receiverAddress.value,
-receiverEmail: receiverEmail.value,
-receiverPhone: receiverPhone.value
+manualHistory: history.value ? history.value.split(",").map(i=>i.trim()) : [],
+receiverName: receiverName.value.trim(),
+receiverAddress: receiverAddress.value.trim(),
+receiverEmail: receiverEmail.value || "",
+receiverPhone: receiverPhone.value.trim()
 });
 
 code.value = trackingCode;
-
-alert("Saved: "+trackingCode);
+alert("✅ Saved: "+trackingCode);
 load();
 };
 
@@ -277,32 +320,34 @@ html+=`<div class="card">${d.id}
 <button onclick="del('${d.id}')">Delete</button>
 </div>`;
 });
-list.innerHTML=html;
+document.getElementById("list").innerHTML = html;
 }
 
 // DELETE
-window.del=async(id)=>{
+window.del = async(id)=>{
 await deleteDoc(doc(db,"shipments",id));
 load();
 };
 
-// ADMIN NAV
-window.openAdmin=()=>{
-trackPage.classList.add("hidden");
-loginPage.classList.remove("hidden");
+// NAV
+window.openAdmin = ()=>{
+document.getElementById("trackPage").classList.add("hidden");
+document.getElementById("loginPage").classList.remove("hidden");
 };
 
-window.login=()=>{
-if(pass.value==="admin123"){
-loginPage.classList.add("hidden");
-adminPage.classList.remove("hidden");
+window.login = ()=>{
+if(document.getElementById("pass").value === "admin123"){
+document.getElementById("loginPage").classList.add("hidden");
+document.getElementById("adminPage").classList.remove("hidden");
 load();
-}else alert("Wrong password");
+}else{
+alert("Wrong password");
+}
 };
 
-window.back=()=>{
-adminPage.classList.add("hidden");
-trackPage.classList.remove("hidden");
+window.back = ()=>{
+document.getElementById("adminPage").classList.add("hidden");
+document.getElementById("trackPage").classList.remove("hidden");
 };
 
 </script>
