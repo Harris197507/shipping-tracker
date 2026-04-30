@@ -5,17 +5,29 @@
 <title>Admin • GlobeX</title>
 
 <style>
-body{margin:0;font-family:sans-serif;background:#f3f3f3}
-.header{background:#4d148c;color:white;padding:15px;text-align:center}
-.card{background:white;margin:12px;padding:15px;border-radius:10px}
-input,textarea{width:100%;padding:10px;margin-top:8px;border-radius:6px;border:1px solid #ccc}
-button{width:100%;padding:10px;margin-top:10px;background:#ff6200;color:white;border:none;border-radius:6px}
+body{margin:0;font-family:sans-serif;background:#0f172a;color:white}
+.header{background:#1e293b;padding:15px;text-align:center;font-weight:bold}
+.card{background:#1e293b;margin:12px;padding:15px;border-radius:10px}
+input,textarea{width:100%;padding:12px;margin-top:8px;border-radius:6px;border:none;background:#0f172a;color:white}
+button{width:100%;padding:12px;margin-top:10px;background:#2563eb;color:white;border:none;border-radius:6px}
+.hidden{display:none}
 </style>
 </head>
 
 <body>
 
 <div class="header">Admin Dashboard</div>
+
+<!-- LOGIN -->
+<div id="loginBox" class="card">
+<h3>Admin Login</h3>
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+</div>
+
+<!-- ADMIN -->
+<div id="adminPanel" class="hidden">
 
 <div class="card">
 <h3>Create Shipment</h3>
@@ -29,6 +41,7 @@ button{width:100%;padding:10px;margin-top:10px;background:#ff6200;color:white;bo
 <input id="receiverAddress" placeholder="Receiver Address">
 
 <button onclick="save()">Save Shipment</button>
+<button onclick="logout()">Logout</button>
 </div>
 
 <div class="card">
@@ -36,7 +49,10 @@ button{width:100%;padding:10px;margin-top:10px;background:#ff6200;color:white;bo
 <div id="list"></div>
 </div>
 
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
@@ -48,14 +64,38 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
 const db = firebase.firestore();
 
-async function save(){
-
-  if(!from.value || !to.value || !receiverName.value || !receiverAddress.value){
-    alert("Fill all fields");
-    return;
+/* LOGIN */
+async function login(){
+  try{
+    await auth.signInWithEmailAndPassword(email.value, password.value);
+  }catch(e){
+    alert(e.message);
   }
+}
+
+/* LOGOUT */
+function logout(){
+  auth.signOut();
+}
+
+/* AUTH STATE */
+auth.onAuthStateChanged(user=>{
+  if(user){
+    loginBox.classList.add("hidden");
+    adminPanel.classList.remove("hidden");
+    loadList();
+  }else{
+    loginBox.classList.remove("hidden");
+    adminPanel.classList.add("hidden");
+  }
+});
+
+/* SAVE */
+async function save(){
 
   const code="GLO"+Math.floor(100000+Math.random()*900000);
 
@@ -63,21 +103,15 @@ async function save(){
     from:from.value,
     to:to.value,
     status:status.value || "In transit",
-    history:history.value ? history.value.split(",").map(x=>x.trim()) : [],
+    history:history.value ? history.value.split(",") : [],
     receiverName:receiverName.value,
     receiverAddress:receiverAddress.value
   });
 
   alert("Saved: "+code);
-
-  from.value="";
-  to.value="";
-  status.value="";
-  history.value="";
-  receiverName.value="";
-  receiverAddress.value="";
 }
 
+/* LIST */
 function loadList(){
   db.collection("shipments").onSnapshot(snap=>{
     list.innerHTML="";
@@ -88,18 +122,11 @@ function loadList(){
       <div style="margin-top:10px">
         <b>${doc.id}</b><br>
         ${d.from} → ${d.to}<br>
-        ${d.receiverName}<br>
-        <button onclick="del('${doc.id}')">Delete</button>
+        ${d.receiverName}
       </div>`;
     });
   });
 }
-
-function del(id){
-  db.collection("shipments").doc(id).delete();
-}
-
-loadList();
 
 </script>
 
