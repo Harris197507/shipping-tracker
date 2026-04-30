@@ -5,59 +5,93 @@
 <title>GlobeX Logistics PRO</title>
 
 <style>
-body{
+body {
   margin:0;
   font-family:Segoe UI;
-  background:linear-gradient(135deg,#4D148C,#0d001a);
+  background: radial-gradient(circle at top,#6a1b9a,#1a0033);
   color:#fff;
 }
-.header{
-  padding:20px;
+
+/* HEADER */
+.header {
+  padding:18px;
   text-align:center;
+  font-size:22px;
   font-weight:bold;
   background:rgba(255,255,255,0.08);
-  backdrop-filter:blur(10px);
+  backdrop-filter:blur(12px);
+  box-shadow:0 10px 30px rgba(0,0,0,0.5);
 }
-.container{
+
+/* CARD */
+.card {
   max-width:650px;
   margin:20px auto;
   padding:20px;
   border-radius:20px;
-  background:rgba(255,255,255,0.07);
-  backdrop-filter:blur(14px);
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(15px);
+  box-shadow:0 20px 40px rgba(0,0,0,0.5);
 }
-input,textarea,select{
+
+/* INPUT */
+input, textarea {
   width:100%;
   padding:14px;
   margin-top:10px;
   border-radius:12px;
   border:none;
+  background:rgba(255,255,255,0.15);
+  color:#fff;
 }
-button{
+
+/* BUTTON */
+button {
   width:100%;
   padding:14px;
   margin-top:12px;
   border:none;
   border-radius:12px;
-  background:#ff6a00;
+  background:linear-gradient(145deg,#ff7b00,#ff3d00);
   color:#fff;
   font-weight:bold;
 }
-.hidden{display:none;}
-.status{
+
+/* STATUS */
+.status {
   padding:12px;
-  background:#ff9800;
+  border-radius:12px;
   text-align:center;
-  border-radius:10px;
+  background:orange;
+  margin-top:10px;
 }
-.truck{
-  font-size:30px;
+
+/* PROGRESS */
+.progress {
+  height:10px;
+  background:#333;
+  border-radius:10px;
+  overflow:hidden;
+  margin:10px 0;
+}
+.progress-inner {
+  height:100%;
+  width:70%;
+  background:linear-gradient(90deg,#00e676,#00c853);
+}
+
+/* TRUCK */
+.truck {
+  font-size:24px;
   animation:move 4s linear infinite;
 }
-@keyframes move{
-  0%{transform:translateX(-100px);}
+@keyframes move {
+  0%{transform:translateX(-50px);}
   100%{transform:translateX(250px);}
 }
+
+.hidden { display:none; }
+
 </style>
 </head>
 
@@ -66,7 +100,7 @@ button{
 <div class="header">🌍 GlobeX Logistics PRO</div>
 
 <!-- LOGIN -->
-<div class="container" id="loginPage">
+<div id="loginPage" class="card">
 <h3>Admin Login</h3>
 <input id="email" placeholder="Email">
 <input id="password" type="password" placeholder="Password">
@@ -74,37 +108,32 @@ button{
 </div>
 
 <!-- TRACK -->
-<div class="container" id="trackPage">
+<div class="card">
 <input id="trackInput" placeholder="Enter Tracking Code">
-<button onclick="track()">Track</button>
-<div id="result"></div>
+<button onclick="track()">Track Shipment</button>
 </div>
 
 <!-- ADMIN -->
-<div class="container hidden" id="adminPage">
+<div id="adminPage" class="card hidden">
 <h3>Create Shipment</h3>
 
-<input id="code" placeholder="Tracking Code (auto)">
 <input id="from" placeholder="From">
 <input id="to" placeholder="To">
+<input id="status" placeholder="Status (In transit)">
+<textarea id="history" placeholder="Timeline (comma separated)"></textarea>
 
-<select id="status">
-<option>In transit</option>
-<option>Delivered</option>
-<option>Delayed</option>
-</select>
-
-<textarea id="history" placeholder="Timeline comma separated"></textarea>
-
+<h4>Receiver</h4>
 <input id="receiverName" placeholder="Name">
 <input id="receiverAddress" placeholder="Address">
 <input id="receiverEmail" placeholder="Email">
 <input id="receiverPhone" placeholder="Phone">
 
-<button onclick="save()">Save</button>
+<button onclick="save()">Save Shipment</button>
 <button onclick="logout()">Logout</button>
-
 </div>
+
+<!-- RESULT -->
+<div id="result" class="card hidden"></div>
 
 <script type="module">
 
@@ -112,7 +141,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-/* 🔥 YOUR CONFIG */
+/* FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
   authDomain: "globaltrackingsystem-f14c2.firebaseapp.com",
@@ -131,20 +160,15 @@ window.login = async () => {
   try {
     const userCred = await signInWithEmailAndPassword(
       auth,
-      email.value,
-      password.value
+      email.value.trim(),
+      password.value.trim()
     );
 
-    const user = userCred.user;
-
-    // 🔐 ADMIN ONLY
-    if (user.email !== "admin@globex.com") {
-      alert("❌ Not authorized as admin");
+    if (userCred.user.email !== "admin@globex.com") {
+      alert("❌ Not admin");
       await signOut(auth);
       return;
     }
-
-    alert("✅ Admin login successful");
 
     loginPage.classList.add("hidden");
     adminPage.classList.remove("hidden");
@@ -155,57 +179,96 @@ window.login = async () => {
 };
 
 /* LOGOUT */
-window.logout = async ()=>{
+window.logout = async () => {
   await signOut(auth);
   location.reload();
 };
 
-/* GENERATE */
+/* GENERATE CODE */
 function generateCode(){
-  return "GLO"+Math.floor(100000+Math.random()*900000);
+  return "GLO" + Math.floor(100000 + Math.random()*900000);
 }
 
 /* SAVE */
-window.save = async ()=>{
-  let trackingCode = code.value || generateCode();
+window.save = async () => {
 
-  await setDoc(doc(db,"shipments",trackingCode),{
-    from: from.value,
-    to: to.value,
-    status: status.value || "In transit",
-    eta: new Date().toDateString(),
-    manualHistory: history.value 
-      ? history.value.split(",").map(x=>x.trim())
-      : [],
-    receiverName: receiverName.value,
-    receiverAddress: receiverAddress.value,
-    receiverEmail: receiverEmail.value,
-    receiverPhone: receiverPhone.value
-  });
+  if(!from.value || !to.value){
+    alert("Fill required fields");
+    return;
+  }
 
-  code.value = trackingCode;
-  alert("✅ Saved "+trackingCode);
+  let code = generateCode();
+
+  try {
+    await setDoc(doc(db,"shipments",code),{
+      from: from.value,
+      to: to.value,
+      status: status.value || "In transit",
+      eta: new Date().toDateString(),
+      history: history.value
+        ? history.value.split(",").map(x=>x.trim())
+        : [],
+      receiverName: receiverName.value,
+      receiverAddress: receiverAddress.value,
+      receiverEmail: receiverEmail.value,
+      receiverPhone: receiverPhone.value
+    });
+
+    alert("✅ Saved: " + code);
+
+  } catch(err){
+    alert("❌ " + err.message);
+  }
 };
 
 /* TRACK */
-window.track = async ()=>{
-  let snap = await getDoc(doc(db,"shipments",trackInput.value));
+window.track = async () => {
+
+  let id = trackInput.value.trim();
+
+  if(!id){
+    alert("Enter tracking code");
+    return;
+  }
+
+  let snap = await getDoc(doc(db,"shipments",id));
+
   if(!snap.exists()){
-    result.innerHTML="❌ Not found";
+    alert("❌ Not found");
     return;
   }
 
   let d = snap.data();
 
-  result.innerHTML=`
-    <h3>${trackInput.value}</h3>
+  result.classList.remove("hidden");
+
+  result.innerHTML = `
+    <h2>${id}</h2>
+
     <div class="status">${d.status}</div>
+
+    <div class="progress">
+      <div class="progress-inner"></div>
+    </div>
+
     <div class="truck">🚚</div>
+
+    <p><b>ETA:</b> ${d.eta}</p>
     <p><b>From:</b> ${d.from}</p>
     <p><b>To:</b> ${d.to}</p>
-    ${d.manualHistory.map(x=>"<div>"+x+"</div>").join("")}
-    <h4>${d.receiverName}</h4>
+
+    <h3>Timeline</h3>
+    ${(d.history || []).map(x => `<p>📦 ${x}</p>`).join("")}
+
+    <h3>Receiver</h3>
+    <p>${d.receiverName}</p>
     <p>${d.receiverAddress}</p>
+    <p>${d.receiverEmail}</p>
+    <p>${d.receiverPhone}</p>
+
+    <iframe width="100%" height="200"
+      src="https://maps.google.com/maps?q=${encodeURIComponent(d.to)}&output=embed">
+    </iframe>
   `;
 };
 
