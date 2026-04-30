@@ -173,28 +173,36 @@ return "GLO" + Math.floor(10000 + Math.random()*90000);
 }
 
 
-// 💾 SAVE
-window.save = async ()=>{
-let trackingCode = code.value || generateCode();
+window.save = async () => {
+  if (!from.value || !to.value || !receiverName.value) {
+    alert("❌ Fill required fields");
+    return;
+  }
 
-await setDoc(doc(db,"shipments",trackingCode),{
-from: from.value,
-to: to.value,
-status: status.value,
-eta: new Date().toDateString(),
-manualHistory: history.value.split(","),
-receiverName: receiverName.value,
-receiverAddress: receiverAddress.value,
-receiverEmail: receiverEmail.value,
-receiverPhone: receiverPhone.value
-});
+  let trackingCode = code.value || generateCode();
 
-code.value = trackingCode;
+  try {
+    await setDoc(doc(db, "shipments", trackingCode), {
+      from: from.value,
+      to: to.value,
+      status: status.value,
+      eta: new Date().toDateString(),
+      manualHistory: history.value.split(","),
+      receiverName: receiverName.value,
+      receiverAddress: receiverAddress.value,
+      receiverEmail: receiverEmail.value,
+      receiverPhone: receiverPhone.value
+    });
 
-alert("✅ Saved: " + trackingCode);
-load();
+    code.value = trackingCode;
+    alert("✅ Saved: " + trackingCode);
+    load();
+
+  } catch (err) {
+    console.error(err);
+    alert("❌ ERROR: " + err.message);
+  }
 };
-
 
 // 📊 LOAD
 async function load(){
