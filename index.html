@@ -164,17 +164,23 @@ window.login = async () => {
       password.value.trim()
     );
 
-    if (userCred.user.email !== "admin@globex.com") {
-      alert("❌ Not admin");
+    const user = userCred.user;
+
+    // 🔐 ADMIN ONLY ACCESS
+    if (user.email !== "admin@globex.com") {
+      alert("❌ Access denied. Admin only.");
       await signOut(auth);
       return;
     }
+
+    // ✅ SUCCESS LOGIN
+    alert("✅ Welcome Admin");
 
     loginPage.classList.add("hidden");
     adminPage.classList.remove("hidden");
 
   } catch (e) {
-    alert("❌ " + e.message);
+    alert("❌ Login failed: " + e.message);
   }
 };
 
