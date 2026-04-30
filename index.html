@@ -2,352 +2,221 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GlobeX Logistics</title>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<title>GlobeX Logistics Pro</title>
 
 <style>
-body{font-family:Segoe UI;margin:0;background:#eef2f7}
+body{margin:0;font-family:Segoe UI;background:#eef2f7}
 
+/* HEADER */
 .header{
-background:#4D148C;
-color:#fff;
-padding:18px;
-text-align:center;
-font-weight:bold
+background:linear-gradient(135deg,#4D148C,#7B2FF7);
+color:#fff;padding:20px;text-align:center;font-weight:bold
 }
 
+/* CARD */
 .container{
-max-width:650px;
-margin:20px auto;
-background:#fff;
-padding:20px;
-border-radius:12px;
-box-shadow:0 5px 15px rgba(0,0,0,0.1)
+max-width:700px;margin:20px auto;padding:20px;
+background:#fff;border-radius:15px;
+box-shadow:0 10px 30px rgba(0,0,0,0.1)
 }
 
 input,select,textarea{
-width:100%;
-padding:12px;
-margin-top:10px;
-border-radius:8px;
-border:1px solid #ccc
+width:100%;padding:12px;margin-top:10px;
+border-radius:10px;border:1px solid #ddd
 }
 
 button{
-width:100%;
-padding:12px;
-margin-top:12px;
-background:#FF6600;
-color:#fff;
-border:none;
-border-radius:8px;
-font-weight:bold
-}
-
-.status{
-padding:10px;
-border-radius:8px;
-color:#fff;
-text-align:center;
-margin-bottom:10px
-}
-
-.timeline{
-border-left:4px solid #FF6600;
-padding-left:10px;
-margin-top:10px
-}
-
-.admin-btn{
-position:fixed;
-bottom:80px;
-right:20px;
-width:60px;
-height:60px;
-border-radius:50%;
-background:#4D148C;
-color:#fff;
-font-size:22px;
-border:none
+width:100%;padding:12px;margin-top:10px;
+background:#FF6600;color:#fff;border:none;
+border-radius:10px;font-weight:bold
 }
 
 .hidden{display:none}
 
-.badge{
-background:#eee;
-padding:6px 10px;
-border-radius:6px;
-display:inline-block;
-margin-top:5px
+/* PROGRESS */
+.progress{height:10px;background:#eee;border-radius:10px;margin:10px 0}
+.progress-bar{height:100%;background:#FF6600}
+
+/* TRUCK */
+.truck{
+animation:move 5s linear infinite;font-size:24px
+}
+@keyframes move{
+0%{transform:translateX(-20px)}
+100%{transform:translateX(100%)}
 }
 
-.card{
-background:#f9fafc;
-padding:15px;
-border-radius:10px;
-margin-top:15px;
-box-shadow:0 2px 6px rgba(0,0,0,0.05);
+/* ANALYTICS */
+.stats{
+display:flex;gap:10px;margin-top:10px
 }
-
-label{
-font-size:13px;
-color:#555;
-margin-top:10px;
-display:block;
+.stat{
+flex:1;background:#f5f5f5;padding:10px;border-radius:10px;text-align:center
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">🌍 GlobeX Logistics</div>
-
-<!-- TRACK -->
-<div class="container" id="trackPage">
-<input id="trackInput" placeholder="Enter tracking code">
-<button onclick="track()">Track Shipment</button>
-<div id="result"></div>
-</div>
+<div class="header">🌍 GlobeX Logistics PRO</div>
 
 <!-- LOGIN -->
-<div class="container hidden" id="loginPage">
-<h3>Admin Login</h3>
-<input id="pass" placeholder="Password">
+<div class="container" id="loginPage">
+<h3>Login</h3>
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
 <button onclick="login()">Login</button>
+<button onclick="signup()">Create Account</button>
 </div>
 
-<!-- ADMIN -->
-<div class="container hidden" id="adminPage">
+<!-- DASHBOARD -->
+<div class="container hidden" id="dashboard">
 
-<div class="card">
-<h3>Shipment Details</h3>
+<h3>Analytics Dashboard</h3>
 
-<label>Tracking Code</label>
-<input id="code" readonly placeholder="Auto generated">
+<div class="stats">
+<div class="stat"><b id="total">0</b><br>Total</div>
+<div class="stat"><b id="delivered">0</b><br>Delivered</div>
+<div class="stat"><b id="transit">0</b><br>Transit</div>
+</div>
 
-<label>From</label>
-<input id="from">
+<h3>Create Shipment</h3>
 
-<label>To</label>
-<input id="to">
+<input id="code" readonly placeholder="Auto Code">
+<input id="from" placeholder="From">
+<input id="to" placeholder="To">
 
-<label>Status</label>
 <select id="status">
 <option>In transit</option>
 <option>Out for delivery</option>
 <option>Delivered</option>
-<option>Delayed</option>
 </select>
 
-<label>Timeline</label>
-<textarea id="history" placeholder="Comma separated timeline"></textarea>
-</div>
+<textarea id="history" placeholder="Timeline"></textarea>
 
-<div class="card">
-<h3>Receiver Details</h3>
-
-<label>Name</label>
-<input id="receiverName">
-
-<label>Address</label>
-<input id="receiverAddress">
-
-<label>Email</label>
-<input id="receiverEmail">
-
-<label>Phone</label>
-<input id="receiverPhone">
-</div>
+<input id="receiverName" placeholder="Receiver">
+<input id="receiverEmail" placeholder="Email">
 
 <button onclick="save()">Save Shipment</button>
 
 <div id="list"></div>
 
-<button onclick="back()">⬅ Back</button>
+<button onclick="logout()">Logout</button>
 </div>
 
-<button class="admin-btn" onclick="openAdmin()">⚙️</button>
+<!-- TRACK -->
+<div class="container hidden" id="trackPage">
+<input id="trackInput" placeholder="Enter tracking code">
+<button onclick="track()">Track</button>
+<div id="result"></div>
+</div>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, getDocs, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const app = initializeApp({
 apiKey:"AIzaSyBQr2KtnYQWNUmFu_54AUzmM1zMw2las14",
 authDomain:"fedex-tracking-system.firebaseapp.com",
 projectId:"fedex-tracking-system"
 });
+
 const db = getFirestore(app);
+const auth = getAuth(app);
 
-// ELEMENTS
-const code = document.getElementById("code");
-const from = document.getElementById("from");
-const to = document.getElementById("to");
-const status = document.getElementById("status");
-const history = document.getElementById("history");
+/* AUTH */
+window.signup = async ()=>{
+await createUserWithEmailAndPassword(auth,email.value,password.value);
+alert("Account created");
+};
 
-const receiverName = document.getElementById("receiverName");
-const receiverAddress = document.getElementById("receiverAddress");
-const receiverPhone = document.getElementById("receiverPhone");
-const receiverEmail = document.getElementById("receiverEmail");
+window.login = async ()=>{
+await signInWithEmailAndPassword(auth,email.value,password.value);
+loginPage.classList.add("hidden");
+dashboard.classList.remove("hidden");
+load();
+};
 
-// GENERATE CODE
+window.logout = async ()=>{
+await signOut(auth);
+location.reload();
+};
+
+/* GENERATE */
 function generateCode(){
-return "GLO" + Math.floor(10000 + Math.random()*90000);
+return "GLO"+Math.floor(10000+Math.random()*90000);
 }
 
-// ETA
-function getETA(){
-let d = new Date();
-d.setDate(d.getDate()+2);
-return d.toDateString();
-}
-
-// TRACK
-window.track = async ()=>{
-let input = document.getElementById("trackInput").value.trim();
-let snap = await getDoc(doc(db,"shipments",input));
-
-if(!snap.exists()){
-document.getElementById("result").innerHTML="❌ Tracking not found";
-return;
-}
-
-let d = snap.data();
-
-let color="#ff9800";
-if(d.status==="Delivered") color="#28a745";
-if(d.status==="Delayed") color="#dc3545";
-
-document.getElementById("result").innerHTML = `
-<h3>${input}</h3>
-
-<div class="status" style="background:${color}">
-${d.status}
-</div>
-
-<div class="badge">Estimated Delivery: ${d.eta}</div>
-
-<p><b>From:</b> ${d.from}</p>
-<p><b>To:</b> ${d.to}</p>
-
-<div class="timeline">
-${d.manualHistory?.join("<br>")}
-</div>
-
-<iframe width="100%" height="220" style="border-radius:10px;margin-top:10px"
-src="https://maps.google.com/maps?q=${encodeURIComponent(d.from)} to ${encodeURIComponent(d.to)}&output=embed"></iframe>
-
-<br>
-
-<b>Receiver</b>
-<p>${d.receiverName}</p>
-<p>${d.receiverAddress}</p>
-<p>${d.receiverEmail || ""}</p>
-<p>${d.receiverPhone}</p>
-
-<button onclick="downloadPDF('${input}')">Download Receipt</button>
-`;
-};
-
-// PDF
-window.downloadPDF = async (codeVal)=>{
-const { jsPDF } = window.jspdf;
-let snap = await getDoc(doc(db,"shipments",codeVal));
-let d = snap.data();
-
-let pdf = new jsPDF();
-
-pdf.setFillColor(77,20,140);
-pdf.rect(0,0,210,30,"F");
-
-pdf.setTextColor(255,255,255);
-pdf.text("GlobeX Logistics",15,20);
-
-pdf.setTextColor(0,0,0);
-pdf.text("Tracking: "+codeVal,20,50);
-pdf.text("From: "+d.from,20,60);
-pdf.text("To: "+d.to,20,70);
-pdf.text("ETA: "+d.eta,20,80);
-
-let qrDiv = document.createElement("div");
-new QRCode(qrDiv,{text:codeVal,width:80,height:80});
-let img = qrDiv.querySelector("img").src;
-pdf.addImage(img,"PNG",150,40,40,40);
-
-pdf.setTextColor(200,200,200);
-pdf.setFontSize(40);
-pdf.text("SAMPLE",60,150,{angle:45});
-
-pdf.save(codeVal+".pdf");
-};
-
-// SAVE
+/* SAVE */
 window.save = async ()=>{
-if(!from.value || !to.value){
-alert("Fill required fields");
-return;
-}
-
 let trackingCode = code.value || generateCode();
 
 await setDoc(doc(db,"shipments",trackingCode),{
-from: from.value.trim(),
-to: to.value.trim(),
+from: from.value,
+to: to.value,
 status: status.value,
-eta: getETA(),
-manualHistory: history.value ? history.value.split(",").map(i=>i.trim()) : [],
-receiverName: receiverName.value.trim(),
-receiverAddress: receiverAddress.value.trim(),
-receiverEmail: receiverEmail.value || "",
-receiverPhone: receiverPhone.value.trim()
+eta: new Date().toDateString(),
+manualHistory: history.value.split(","),
+receiverName: receiverName.value,
+receiverEmail: receiverEmail.value
 });
 
 code.value = trackingCode;
-alert("✅ Saved: "+trackingCode);
 load();
 };
 
-// LOAD
+/* LOAD + ANALYTICS */
 async function load(){
 let snap = await getDocs(collection(db,"shipments"));
+
+let total=0, delivered=0, transit=0;
+
 let html="";
 snap.forEach(d=>{
-html+=`<div class="card">${d.id}
-<button onclick="del('${d.id}')">Delete</button>
-</div>`;
+total++;
+if(d.data().status==="Delivered") delivered++;
+else transit++;
+
+html+=`<div>${d.id}</div>`;
 });
-document.getElementById("list").innerHTML = html;
+
+list.innerHTML=html;
+
+totalEl.innerText=total;
+deliveredEl.innerText=delivered;
+transitEl.innerText=transit;
 }
 
-// DELETE
-window.del = async(id)=>{
-await deleteDoc(doc(db,"shipments",id));
-load();
-};
+/* TRACK */
+window.track = async ()=>{
+let snap = await getDoc(doc(db,"shipments",trackInput.value));
 
-// NAV
-window.openAdmin = ()=>{
-document.getElementById("trackPage").classList.add("hidden");
-document.getElementById("loginPage").classList.remove("hidden");
-};
-
-window.login = ()=>{
-if(document.getElementById("pass").value === "admin123"){
-document.getElementById("loginPage").classList.add("hidden");
-document.getElementById("adminPage").classList.remove("hidden");
-load();
-}else{
-alert("Wrong password");
+if(!snap.exists()){
+result.innerHTML="Not found";
+return;
 }
-};
 
-window.back = ()=>{
-document.getElementById("adminPage").classList.add("hidden");
-document.getElementById("trackPage").classList.remove("hidden");
+let d = snap.data();
+
+let progress = d.status==="Delivered"?100:50;
+
+result.innerHTML = `
+<h3>${trackInput.value}</h3>
+
+<div class="progress">
+<div class="progress-bar" style="width:${progress}%"></div>
+</div>
+
+<div class="truck">🚚</div>
+
+<p>${d.status}</p>
+<p>${d.from} → ${d.to}</p>
+
+<iframe width="100%" height="200"
+src="https://maps.google.com/maps?q=${encodeURIComponent(d.from)} to ${encodeURIComponent(d.to)}&output=embed"></iframe>
+`;
 };
 
 </script>
