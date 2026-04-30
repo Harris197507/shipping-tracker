@@ -127,13 +127,30 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 /* LOGIN */
-window.login = async ()=>{
-  try{
-    await signInWithEmailAndPassword(auth,email.value,password.value);
+window.login = async () => {
+  try {
+    const userCred = await signInWithEmailAndPassword(
+      auth,
+      email.value,
+      password.value
+    );
+
+    const user = userCred.user;
+
+    // 🔐 ADMIN ONLY
+    if (user.email !== "admin@globex.com") {
+      alert("❌ Not authorized as admin");
+      await signOut(auth);
+      return;
+    }
+
+    alert("✅ Admin login successful");
+
     loginPage.classList.add("hidden");
     adminPage.classList.remove("hidden");
-  }catch(e){
-    alert("❌ "+e.message);
+
+  } catch (e) {
+    alert("❌ " + e.message);
   }
 };
 
