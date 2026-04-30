@@ -168,7 +168,7 @@ window.save = async () => {
  await setDoc(doc(db, "shipments", trackingCode), {
  from: from.value,
  to: to.value,
- status: status.value,
+ status: status.value || "In transit",
  eta: new Date().toDateString(),
  manualHistory: history.value
   ? history.value.split(",").map(x => x.trim())
