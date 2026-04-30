@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GlobeX Logistics</title>
+<title>GlobeX Tracking</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -10,11 +10,10 @@
 <style>
 body{
   margin:0;
-  font-family:-apple-system, sans-serif;
+  font-family:sans-serif;
   background:#f3f3f3;
 }
 
-/* HEADER */
 .header{
   background:#4d148c;
   color:white;
@@ -23,7 +22,6 @@ body{
   font-weight:bold;
 }
 
-/* CARD */
 .card{
   background:white;
   margin:12px;
@@ -32,107 +30,69 @@ body{
   box-shadow:0 4px 10px rgba(0,0,0,0.08);
 }
 
-/* INPUT */
-input, textarea{
+input{
   width:100%;
   padding:12px;
   margin-top:10px;
   border-radius:8px;
-  border:1px solid #ddd;
+  border:1px solid #ccc;
 }
 
-/* BUTTON */
 button{
   width:100%;
   padding:12px;
   margin-top:10px;
-  border:none;
-  border-radius:8px;
   background:#ff6200;
   color:white;
+  border:none;
+  border-radius:8px;
   font-weight:bold;
 }
 
-/* PROGRESS */
 .progress{
   background:#eee;
-  border-radius:8px;
+  height:10px;
+  border-radius:10px;
+  overflow:hidden;
   margin-top:10px;
 }
 
-.progress-bar{
-  height:8px;
+.bar{
+  height:10px;
   background:#ff6200;
 }
 
-/* TIMELINE */
 .step{
-  padding:10px;
-  border-left:3px solid #ddd;
-  margin-top:6px;
+  padding:8px;
+  border-left:4px solid #ddd;
+  margin-top:5px;
 }
 
 .done{
-  border-color:#ff6200;
-  background:#fff3ea;
-}
-
-.code{
-  font-size:18px;
+  border-left:4px solid #ff6200;
   font-weight:bold;
-}
-
-.hidden{
-  display:none;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">FedEx Tracking • GlobeX Logistics</div>
+<div class="header">GlobeX Logistics Tracking</div>
 
-<!-- ADMIN LOGIN -->
 <div class="card">
-<input id="adminCode" placeholder="Admin Code">
-<button onclick="openAdmin()">Enter</button>
-</div>
-
-<!-- TRACK -->
-<div class="card">
-<input id="trackInput" placeholder="Tracking Code">
+<input id="code" placeholder="Enter Tracking Code">
 <button onclick="track()">Track Package</button>
 </div>
 
-<!-- ADMIN PANEL -->
-<div id="adminPage" class="card hidden">
+<div id="result"></div>
 
-<h3>Create Shipment</h3>
-
-<input id="from" placeholder="From">
-<input id="to" placeholder="To">
-<input id="status" placeholder="Status">
-<textarea id="history" placeholder="Timeline (comma separated)"></textarea>
-
-<input id="receiverName" placeholder="Receiver Name">
-<input id="receiverAddress" placeholder="Receiver Address">
-
-<button onclick="save()">Save Shipment</button>
-
-<h3>Shipments</h3>
-<div id="list"></div>
-
-</div>
-
-<!-- RESULT -->
-<div id="result" class="card hidden"></div>
-
-<!-- FIREBASE -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
 
+/* FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
   authDomain: "globaltrackingsystem-f14c2.firebaseapp.com",
@@ -142,174 +102,127 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* ADMIN LOGIN */
-function openAdmin(){
-  if(adminCode.value==="admin1234"){
-    adminPage.classList.remove("hidden");
-    adminCode.value="";
-    loadList();
-  }else{
-    alert("Wrong code");
+/* AUTO LOAD FROM URL */
+window.addEventListener("load", () => {
+  const params = new URLSearchParams(window.location.search);
+  const c = params.get("code");
+  if(c){
+    code.value = c;
+    track();
   }
-}
+});
 
-/* SAVE (FIXED) */
-async function save(){
-
-  if(!from.value || !to.value || !receiverName.value || !receiverAddress.value){
-    alert("Fill all fields");
-    return;
-  }
-
-  const code="GLO"+Math.floor(100000+Math.random()*900000);
-
-  await db.collection("shipments").doc(code).set({
-    from:from.value,
-    to:to.value,
-    status:status.value || "In transit",
-    history:history.value ? history.value.split(",").map(x=>x.trim()) : [],
-    receiverName:receiverName.value,
-    receiverAddress:receiverAddress.value
-  });
-
-  alert("Saved: "+code);
-
-  // clear inputs
-  from.value="";
-  to.value="";
-  status.value="";
-  history.value="";
-  receiverName.value="";
-  receiverAddress.value="";
-
-  loadList();
-}
-
-/* LOAD LIST */
-function loadList(){
-  db.collection("shipments").onSnapshot(snap=>{
-    list.innerHTML="";
-    snap.forEach(doc=>{
-      let d=doc.data();
-
-      list.innerHTML+=`
-      <div class="card">
-        <b>📦 ${doc.id}</b><br>
-        ${d.from} → ${d.to}<br>
-        👤 ${d.receiverName}<br>
-        📍 ${d.receiverAddress || "No address"}
-        <button onclick="del('${doc.id}')">Delete</button>
-      </div>`;
-    });
-  });
-}
-
-/* DELETE */
-function del(id){
-  db.collection("shipments").doc(id).delete();
-}
-
-/* DEFAULT TIMELINE */
-function buildStages(){
-  return [
-    "Shipment received",
-    "Picked up",
-    "In transit",
-    "Arrived destination",
-    "Out for delivery",
-    "Delivered"
-  ];
-}
-
-/* TRACK */
+/* TRACK FUNCTION */
 async function track(){
 
-  let code=trackInput.value.trim();
-  let snap=await db.collection("shipments").doc(code).get();
+  const trackingCode = code.value.trim();
 
-  if(!snap.exists){
-    alert("Tracking not found");
+  if(!trackingCode){
+    alert("Enter tracking code");
     return;
   }
 
-  let d=snap.data();
-  let timeline=d.history.length ? d.history : buildStages();
+  const doc = await db.collection("shipments").doc(trackingCode).get();
 
-let progress = Math.min((timeline.length / 6) * 100, 100);
+  if(!doc.exists){
+    result.innerHTML = "<div class='card'>Tracking not found</div>";
+    return;
+  }
 
-  window.currentData={code,...d};
+  const d = doc.data();
+  const timeline = d.history || [];
 
-  result.classList.remove("hidden");
+  /* REAL COURIER LOGIC */
+  let progress = d.progress || 0;
 
-  result.innerHTML=`
-    <div class="code">${code}</div>
+  if(!progress){
+    if(d.status?.toLowerCase().includes("pending")) progress = 10;
+    else if(d.status?.toLowerCase().includes("transit")) progress = 60;
+    else if(d.status?.toLowerCase().includes("delivery")) progress = 90;
+    else if(d.status?.toLowerCase().includes("delivered")) progress = 100;
+  }
+
+  window.currentData = {trackingCode, ...d};
+
+  result.innerHTML = `
+  <div class="card">
+
+    <h3>${trackingCode}</h3>
 
     <div class="progress">
-      <div class="progress-bar" style="width:${progress}%"></div>
+      <div class="bar" style="width:${progress}%"></div>
     </div>
 
+    <p><b>Status:</b> ${d.status}</p>
     <p><b>From:</b> ${d.from}</p>
     <p><b>To:</b> ${d.to}</p>
-    <p><b>Status:</b> ${d.status}</p>
 
-    <p><b>Receiver:</b><br>
-    ${d.receiverName}<br>${d.receiverAddress}</p>
+    <div id="map" style="height:200px;margin-top:10px;border-radius:10px"></div>
 
-    <div id="map" style="height:200px;margin-top:10px;border-radius:10px;"></div>
+    <h4>Timeline</h4>
+    ${timeline.map((h,i)=>`
+      <div class="step ${i < timeline.length ? "done" : ""}">
+        ${h}
+      </div>
+    `).join("")}
 
-    <div class="timeline">
-      ${timeline.map((h,i)=>`
-        <div class="step ${i<progress/20?"done":""}">
-          ${h}
-        </div>
-      `).join("")}
-    </div>
+    <h4>Receiver</h4>
+    <p>${d.receiverName}</p>
+    <p>${d.receiverAddress}</p>
 
-    <button onclick="printReceipt()">🧾 Print Receipt</button>
+    <button onclick="printReceipt()">Print Receipt</button>
+
+  </div>
   `;
 
-  /* MAP */
-  let map=L.map('map').setView([10,10],2);
+  /* MAP + ANIMATION */
+  setTimeout(()=>{
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    const start = [31.2304,121.4737];
+    const end = [14.5995,120.9842];
 
-  let fromCoords=[31.2304,121.4737];
-  let toCoords=[14.5995,120.9842];
+    const map = L.map("map").setView(start,4);
 
-  let latlngs=[];
-  let line=L.polyline(latlngs,{color:'#ff6200'}).addTo(map);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-  map.fitBounds([fromCoords,toCoords]);
+    const marker = L.marker(start).addTo(map);
 
-  let i=0;
-  let steps=100;
+    const route = L.polyline([start, end], {color:"#ff6200"}).addTo(map);
+    map.fitBounds(route.getBounds());
 
-  let draw=setInterval(()=>{
-    if(i>steps) return clearInterval(draw);
+    let p = 0;
 
-    let lat=fromCoords[0]+(toCoords[0]-fromCoords[0])*(i/steps);
-    let lng=fromCoords[1]+(toCoords[1]-fromCoords[1])*(i/steps);
+    const move = setInterval(()=>{
+      p += 0.01;
+      if(p >= 1) clearInterval(move);
 
-    latlngs.push([lat,lng]);
-    line.setLatLngs(latlngs);
+      const lat = start[0] + (end[0]-start[0]) * p;
+      const lng = start[1] + (end[1]-start[1]) * p;
 
-    i++;
-  },40);
+      marker.setLatLng([lat,lng]);
+
+    },50);
+
+  },200);
+
 }
 
 /* RECEIPT */
 function printReceipt(){
-  let w=window.open("");
+
+  const w = window.open("");
+
   w.document.write(`
     <h2>GlobeX Logistics</h2>
-    <p><b>Tracking:</b> ${currentData.code}</p>
+    <p><b>Tracking:</b> ${currentData.trackingCode}</p>
     <p><b>From:</b> ${currentData.from}</p>
     <p><b>To:</b> ${currentData.to}</p>
     <p><b>Receiver:</b> ${currentData.receiverName}</p>
     <p>${currentData.receiverAddress}</p>
     <br>
-    <center>||| ${currentData.code} |||</center>
+    <center>||| ${currentData.trackingCode} |||</center>
   `);
+
   w.print();
 }
 
