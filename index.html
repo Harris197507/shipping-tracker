@@ -4,11 +4,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GlobeX Logistics PRO</title>
 
+<!-- MAP -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <style>
 body{
   margin:0;
   font-family:Arial;
-  background:linear-gradient(135deg,#2b0057,#5a0dad);
+  background:linear-gradient(135deg,#1a0033,#4b0082);
   color:white;
 }
 
@@ -18,44 +22,66 @@ body{
   font-weight:bold;
 }
 
+/* GLASS CARD */
 .card{
-  background:white;
-  color:black;
-  margin:20px;
+  background:rgba(255,255,255,0.12);
+  backdrop-filter:blur(15px);
   padding:20px;
-  border-radius:15px;
-  box-shadow:0 10px 25px rgba(0,0,0,0.3);
+  margin:20px;
+  border-radius:20px;
+  box-shadow:0 10px 40px rgba(0,0,0,0.5);
 }
 
+/* INPUT */
 input,textarea{
   width:100%;
   padding:12px;
   margin-top:10px;
-  border-radius:8px;
-  border:1px solid #ccc;
+  border-radius:10px;
+  border:none;
 }
 
+/* BUTTON */
 button{
   width:100%;
   padding:14px;
   margin-top:15px;
-  background:linear-gradient(45deg,orange,#ff6600);
-  color:white;
   border:none;
   border-radius:10px;
   font-weight:bold;
+  background:linear-gradient(45deg,orange,#ff4500);
+  color:white;
+}
+
+/* STATUS */
+.status{
+  background:orange;
+  padding:10px;
+  border-radius:10px;
+  text-align:center;
+}
+
+/* PROGRESS */
+.progress{
+  background:#eee;
+  border-radius:10px;
+  overflow:hidden;
+  margin-top:10px;
+}
+.progress-bar{
+  background:linear-gradient(90deg,#ff9800,#ff3d00);
+  color:white;
+  padding:10px;
+  text-align:center;
+}
+
+/* TRUCK ANIMATION */
+@keyframes truckMove{
+  0%{transform:translateX(-40px);}
+  100%{transform:translateX(280px);}
 }
 
 .hidden{display:none;}
-
-.status{
-  background:orange;
-  color:white;
-  padding:10px;
-  border-radius:8px;
-  text-align:center;
-  margin-top:10px;
-}
 </style>
 </head>
 
@@ -63,10 +89,10 @@ button{
 
 <div class="header">🌍 GlobeX Logistics PRO</div>
 
-<!-- ADMIN LOGIN -->
+<!-- ADMIN CODE -->
 <div class="card">
-<h3>Enter Admin Code</h3>
-<input id="adminCode" placeholder="Enter admin code">
+<h3>Admin Code</h3>
+<input id="adminCode">
 <button onclick="openAdmin()">Enter</button>
 </div>
 
@@ -83,7 +109,7 @@ button{
 
 <input id="from" placeholder="From">
 <input id="to" placeholder="To">
-<input id="status" placeholder="Status (In transit)">
+<input id="status" placeholder="Status">
 <textarea id="history" placeholder="Timeline (comma separated)"></textarea>
 
 <h4>Receiver</h4>
@@ -99,16 +125,13 @@ button{
 <!-- RESULT -->
 <div id="result" class="card hidden"></div>
 
-<!-- 🔥 FIXED SCRIPT (NO MODULE) -->
+<!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
 
-// 🔥 CONFIRM SCRIPT RUNNING
-console.log("JS LOADED");
-
-/* FIREBASE CONFIG */
+// 🔥 YOUR FIREBASE (already correct)
 const firebaseConfig = {
   apiKey: "AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
   authDomain: "globaltrackingsystem-f14c2.firebaseapp.com",
@@ -118,79 +141,121 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* ADMIN CODE */
-const ADMIN = "admin1234";
+// 🔐 ADMIN CODE
+const ADMIN_CODE = "admin1234";
 
-/* ADMIN LOGIN */
 function openAdmin(){
-  console.log("clicked");
+  const code = document.getElementById("adminCode").value.trim();
 
-  let codeInput = document.getElementById("adminCode").value.trim();
-
-  if(codeInput === ADMIN){
+  if(code === ADMIN_CODE){
     document.getElementById("adminPage").classList.remove("hidden");
-    alert("✅ Access granted");
-  } else {
-    alert("❌ Wrong code");
+    alert("Admin unlocked");
+  }else{
+    alert("Wrong code");
   }
 }
 
-/* SAVE */
+// 📦 SAVE
 async function save(){
 
-  let trackingCode = "GLO"+Math.floor(100000+Math.random()*900000);
+  const code = "GLO"+Math.floor(100000+Math.random()*900000);
 
-  await db.collection("shipments").doc(trackingCode).set({
-    from: document.getElementById("from").value,
-    to: document.getElementById("to").value,
-    status: document.getElementById("status").value || "In transit",
-    history: document.getElementById("history").value
-      ? document.getElementById("history").value.split(",").map(x=>x.trim())
+  await db.collection("shipments").doc(code).set({
+    from: from.value,
+    to: to.value,
+    status: status.value || "In transit",
+    history: history.value
+      ? history.value.split(",").map(x=>x.trim())
       : [],
-    receiverName: document.getElementById("receiverName").value,
-    receiverAddress: document.getElementById("receiverAddress").value,
-    receiverEmail: document.getElementById("receiverEmail").value,
-    receiverPhone: document.getElementById("receiverPhone").value,
+    receiverName: receiverName.value,
+    receiverAddress: receiverAddress.value,
+    receiverEmail: receiverEmail.value,
+    receiverPhone: receiverPhone.value,
     date: new Date().toDateString()
   });
 
-  alert("✅ Saved: " + trackingCode);
+  alert("Saved Tracking Code: " + code);
 }
 
-/* TRACK */
+// 🔍 TRACK
 async function track(){
 
-  let code = document.getElementById("trackInput").value.trim();
+  const code = trackInput.value.trim();
 
-  let docRef = db.collection("shipments").doc(code);
-  let snap = await docRef.get();
+  const snap = await db.collection("shipments").doc(code).get();
 
   if(!snap.exists){
-    alert("❌ Not found");
+    alert("Tracking not found");
     return;
   }
 
-  let d = snap.data();
+  const d = snap.data();
+
+  const progress = Math.min(d.history.length * 25, 100);
 
   document.getElementById("result").classList.remove("hidden");
 
   document.getElementById("result").innerHTML = `
-    <h3>${code}</h3>
+    <h2>📦 ${code}</h2>
+
     <div class="status">${d.status}</div>
+
+    <div class="progress">
+      <div class="progress-bar" style="width:${progress}%">
+        ${progress}%
+      </div>
+    </div>
+
+    <div style="margin:15px 0;animation:truckMove 4s linear infinite;">
+      🚚
+    </div>
 
     <p><b>From:</b> ${d.from}</p>
     <p><b>To:</b> ${d.to}</p>
     <p><b>ETA:</b> ${d.date}</p>
 
-    <h4>Tracking Timeline</h4>
+    <div id="map" style="height:250px;border-radius:15px;margin:15px 0;"></div>
+
+    <h3>Timeline</h3>
     ${d.history.map(h=>"<p>📦 "+h+"</p>").join("")}
 
-    <h4>Receiver</h4>
+    <h3>Receiver</h3>
     <p>${d.receiverName}</p>
     <p>${d.receiverAddress}</p>
-    <p>${d.receiverEmail}</p>
-    <p>${d.receiverPhone}</p>
   `;
+
+  // 🌍 MAP
+  const map = L.map('map').setView([10,10], 2);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+  const fromCoords = [31.2304,121.4737]; // Shanghai
+  const toCoords = [14.5995,120.9842];   // Philippines
+
+  const line = L.polyline([fromCoords,toCoords],{color:'orange'}).addTo(map);
+  map.fitBounds(line.getBounds());
+
+  L.marker(fromCoords).addTo(map).bindPopup("Origin");
+  L.marker(toCoords).addTo(map).bindPopup("Destination");
+
+  // 🚚 moving truck on map
+  let truck = L.marker(fromCoords).addTo(map);
+
+  let i = 0;
+  let steps = 100;
+
+  let latStep = (toCoords[0] - fromCoords[0]) / steps;
+  let lngStep = (toCoords[1] - fromCoords[1]) / steps;
+
+  setInterval(()=>{
+    if(i < steps){
+      truck.setLatLng([
+        fromCoords[0] + latStep * i,
+        fromCoords[1] + lngStep * i
+      ]);
+      i++;
+    }
+  },100);
 }
 
 </script>
