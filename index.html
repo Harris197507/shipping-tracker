@@ -161,8 +161,7 @@ GlobeX Logistics © 2026<br>
 Customer Support: support@globex.com
 </div>
 
-<div class="admin-btn" onclick="openAdmin()">⚙️</div>
-
+<button class="admin-btn" onclick="openAdmin()">⚙️</button>
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -300,9 +299,9 @@ pdf.save(`receipt_${code}.pdf`);
 };
 
 // ADMIN
-window.openAdmin=()=>{
-trackPage.classList.add("hidden");
-loginPage.classList.remove("hidden");
+window.openAdmin = () => {
+document.getElementById("trackPage").classList.add("hidden");
+document.getElementById("loginPage").classList.remove("hidden");
 };
 
 window.login=()=>{
