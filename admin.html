@@ -2,74 +2,26 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Dashboard</title>
+<title>Admin</title>
 
 <style>
-body{
-  margin:0;
-  font-family:sans-serif;
-  background:#0f172a;
-  color:white;
-}
-
-.header{
-  background:#1e293b;
-  padding:15px;
-  text-align:center;
-  font-weight:bold;
-}
-
-.card{
-  background:#1e293b;
-  margin:12px;
-  padding:15px;
-  border-radius:12px;
-}
-
-input, textarea{
-  width:100%;
-  padding:10px;
-  margin-top:8px;
-  border-radius:6px;
-  border:none;
-  background:#0f172a;
-  color:white;
-}
-
-button{
-  width:100%;
-  padding:10px;
-  margin-top:10px;
-  border:none;
-  border-radius:6px;
-  background:#2563eb;
-  color:white;
-  font-weight:bold;
-}
-
-.small-btn{
-  background:#334155;
-}
-
-.hidden{
-  display:none;
-}
+body{font-family:sans-serif;background:#0f172a;color:white}
+.card{background:#1e293b;margin:10px;padding:15px;border-radius:10px}
+input,textarea{width:100%;padding:10px;margin-top:5px;background:#0f172a;color:white;border:none}
+button{margin-top:10px;padding:10px;width:100%;background:#2563eb;color:white;border:none}
+.hidden{display:none}
 </style>
 </head>
 
 <body>
 
-<div class="header">GlobeX Admin Dashboard</div>
-
-<!-- LOGIN -->
 <div id="loginBox" class="card">
-<h3>Admin Login</h3>
-<input id="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
+<h3>Login</h3>
+<input id="email">
+<input id="password" type="password">
 <button onclick="login()">Login</button>
 </div>
 
-<!-- ADMIN PANEL -->
 <div id="panel" class="hidden">
 
 <div class="card">
@@ -77,31 +29,34 @@ button{
 
 <input id="from" placeholder="From">
 <input id="to" placeholder="To">
-<input id="status" placeholder="Status (Pending / In transit / Delivered)">
-<textarea id="history" placeholder="Timeline (comma separated)"></textarea>
+<input id="status" placeholder="Status">
+<textarea id="history" placeholder="Timeline comma"></textarea>
 
-<input id="receiverName" placeholder="Receiver Name">
-<input id="receiverAddress" placeholder="Receiver Address">
+<input id="receiverName" placeholder="Name">
+<input id="receiverAddress" placeholder="Address">
 
-<button onclick="save()">Save Shipment</button>
-<button onclick="logout()" class="small-btn">Logout</button>
+<input id="weight" placeholder="Weight">
+<input id="type" placeholder="Type">
+<input id="courier" placeholder="Courier">
+<input id="eta" placeholder="ETA">
+
+<button onclick="save()">Save</button>
+<button onclick="logout()">Logout</button>
+
 </div>
 
 <div class="card">
-<h3>Shipments</h3>
 <div id="list"></div>
 </div>
 
 </div>
 
-<!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
 
-/* FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
   authDomain: "globaltrackingsystem-f14c2.firebaseapp.com",
@@ -113,20 +68,17 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-/* LOGIN */
 function login(){
-  auth.signInWithEmailAndPassword(email.value, password.value)
+  auth.signInWithEmailAndPassword(email.value,password.value)
   .catch(e=>alert(e.message));
 }
 
-/* LOGOUT */
 function logout(){
   auth.signOut();
 }
 
-/* AUTH STATE */
-auth.onAuthStateChanged(user=>{
-  if(user){
+auth.onAuthStateChanged(u=>{
+  if(u){
     loginBox.classList.add("hidden");
     panel.classList.remove("hidden");
     load();
@@ -136,124 +88,45 @@ auth.onAuthStateChanged(user=>{
   }
 });
 
-/* CREATE SHIPMENT */
 async function save(){
 
-  if(!from.value || !to.value){
-    alert("Fill required fields");
-    return;
-  }
-
-  const code = "GLO" + Math.floor(100000 + Math.random()*900000);
+  const code = "GLO"+Math.floor(100000+Math.random()*900000);
 
   await db.collection("shipments").doc(code).set({
-    from: from.value,
-    to: to.value,
-    status: status.value || "Pending",
-    history: history.value ? history.value.split(",").map(x=>x.trim()) : [],
-    receiverName: receiverName.value,
-    receiverAddress: receiverAddress.value,
-    progress: 0,
-    createdAt: Date.now()
+    from:from.value,
+    to:to.value,
+    status:status.value,
+    history:history.value.split(","),
+    receiverName:receiverName.value,
+    receiverAddress:receiverAddress.value,
+    weight:weight.value,
+    type:type.value,
+    courier:courier.value,
+    eta:eta.value,
+    progress:0
   });
 
-  alert("Shipment Created: " + code);
-
-  // clear inputs
-  from.value="";
-  to.value="";
-  status.value="";
-  history.value="";
-  receiverName.value="";
-  receiverAddress.value="";
+  alert("Created "+code);
 }
 
-/* LOAD SHIPMENTS */
 function load(){
-  db.collection("shipments").onSnapshot(snap=>{
+  db.collection("shipments").onSnapshot(s=>{
     list.innerHTML="";
-
-    snap.forEach(doc=>{
-      const d = doc.data();
-
-      list.innerHTML += `
-      <div style="margin-top:15px;border-top:1px solid #334155;padding-top:10px">
-
-      <b>${doc.id}</b><br>
-
-      <input value="${d.status || ""}" onchange="update('${doc.id}','status',this.value)">
-      
-      <textarea onchange="update('${doc.id}','history',this.value)">
-${(d.history || []).join(",")}
-      </textarea>
-
-      <input value="${d.receiverName || ""}" onchange="update('${doc.id}','receiverName',this.value)">
-      <input value="${d.receiverAddress || ""}" onchange="update('${doc.id}','receiverAddress',this.value)">
-
-      <button onclick="copyLink('${doc.id}')">Copy Tracking Link</button>
-      <button onclick="del('${doc.id}')" class="small-btn">Delete</button>
-
-      </div>
-      `;
+    s.forEach(doc=>{
+      list.innerHTML+=`
+      <div>
+      ${doc.id}
+      <button onclick="copy('${doc.id}')">Copy Link</button>
+      </div>`;
     });
-
   });
 }
 
-/* UPDATE */
-async function update(id, field, value){
-
-  if(field === "history"){
-    value = value.split(",").map(x=>x.trim());
-  }
-
-  await db.collection("shipments").doc(id).update({
-    [field]: value
-  });
-}
-
-/* DELETE */
-function del(id){
-  db.collection("shipments").doc(id).delete();
-}
-
-/* COPY LINK */
-function copyLink(id){
-  const link = location.origin + "/shipping-tracker/?code=" + id;
+function copy(id){
+  const link = location.origin + "/shipping-tracker/?code="+id;
   navigator.clipboard.writeText(link);
-  alert("Tracking link copied!");
+  alert("Copied");
 }
-
-/* AUTO UPDATE SIMULATION */
-setInterval(async ()=>{
-
-  const snap = await db.collection("shipments").get();
-
-  snap.forEach(doc=>{
-    let d = doc.data();
-
-    let progress = d.progress || 0;
-
-    if(progress >= 100) return;
-
-    progress += Math.random()*5;
-
-    let status = "In transit";
-
-    if(progress > 80) status = "Out for delivery";
-    if(progress >= 100){
-      progress = 100;
-      status = "Delivered";
-    }
-
-    db.collection("shipments").doc(doc.id).update({
-      progress,
-      status
-    });
-
-  });
-
-}, 10000);
 
 </script>
 
