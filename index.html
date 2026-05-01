@@ -8,70 +8,13 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <style>
-body{
-  margin:0;
-  font-family:sans-serif;
-  background:#f3f3f3;
-}
-
-.header{
-  background:#4d148c;
-  color:white;
-  padding:15px;
-  text-align:center;
-  font-weight:bold;
-}
-
-.card{
-  background:white;
-  margin:12px;
-  padding:15px;
-  border-radius:12px;
-  box-shadow:0 4px 10px rgba(0,0,0,0.08);
-}
-
-input{
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-  border-radius:8px;
-  border:1px solid #ccc;
-}
-
-button{
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-  background:#ff6200;
-  color:white;
-  border:none;
-  border-radius:8px;
-  font-weight:bold;
-}
-
-.progress{
-  background:#eee;
-  height:10px;
-  border-radius:10px;
-  overflow:hidden;
-  margin-top:10px;
-}
-
-.bar{
-  height:10px;
-  background:#ff6200;
-}
-
-.step{
-  padding:8px;
-  border-left:4px solid #ddd;
-  margin-top:5px;
-}
-
-.done{
-  border-left:4px solid #ff6200;
-  font-weight:bold;
-}
+body{margin:0;font-family:sans-serif;background:#f3f3f3}
+.header{background:#4d148c;color:#fff;padding:15px;text-align:center;font-weight:bold}
+.card{background:#fff;margin:15px;padding:15px;border-radius:10px}
+input{width:100%;padding:12px;margin-top:10px;border-radius:8px;border:1px solid #ccc}
+button{width:100%;padding:12px;margin-top:10px;background:#ff6200;color:#fff;border:none;border-radius:8px}
+.progress{background:#eee;height:8px;border-radius:10px}
+.bar{height:8px;background:#ff6200;border-radius:10px}
 </style>
 </head>
 
@@ -86,13 +29,11 @@ button{
 
 <div id="result"></div>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
 
-/* FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyCXdd0GWOaRzHacaEk1JH-iFKH7IJ1td-Y",
   authDomain: "globaltrackingsystem-f14c2.firebaseapp.com",
@@ -102,127 +43,122 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* AUTO LOAD FROM URL */
-window.addEventListener("load", () => {
-  const params = new URLSearchParams(window.location.search);
-  const c = params.get("code");
-  if(c){
-    code.value = c;
+/* AUTO LOAD */
+window.addEventListener("load",()=>{
+  const p = new URLSearchParams(window.location.search);
+  if(p.get("code")){
+    code.value = p.get("code");
     track();
   }
 });
 
-/* TRACK FUNCTION */
 async function track(){
 
   const trackingCode = code.value.trim();
-
-  if(!trackingCode){
-    alert("Enter tracking code");
-    return;
-  }
+  if(!trackingCode){ alert("Enter code"); return; }
 
   const doc = await db.collection("shipments").doc(trackingCode).get();
-
   if(!doc.exists){
-    result.innerHTML = "<div class='card'>Tracking not found</div>";
+    result.innerHTML = "<div class='card'>Not found</div>";
     return;
   }
 
   const d = doc.data();
-  const timeline = d.history || [];
+  window.currentData = {trackingCode,...d};
 
-  /* REAL COURIER LOGIC */
   let progress = d.progress || 0;
-
-  if(!progress){
-    if(d.status?.toLowerCase().includes("pending")) progress = 10;
-    else if(d.status?.toLowerCase().includes("transit")) progress = 60;
-    else if(d.status?.toLowerCase().includes("delivery")) progress = 90;
-    else if(d.status?.toLowerCase().includes("delivered")) progress = 100;
-  }
-
-  window.currentData = {trackingCode, ...d};
 
   result.innerHTML = `
   <div class="card">
 
-    <h3>${trackingCode}</h3>
+  <h2>${trackingCode}</h2>
 
-    <div class="progress">
-      <div class="bar" style="width:${progress}%"></div>
-    </div>
+  <p>ETA: <b id="eta"></b></p>
 
-    <p><b>Status:</b> ${d.status}</p>
-    <p><b>From:</b> ${d.from}</p>
-    <p><b>To:</b> ${d.to}</p>
+  <div class="progress">
+    <div class="bar" style="width:${progress}%"></div>
+  </div>
 
-    <div id="map" style="height:200px;margin-top:10px;border-radius:10px"></div>
+  <p><b>Status:</b> ${d.status}</p>
 
-    <h4>Timeline</h4>
-    ${timeline.map((h,i)=>`
-      <div class="step ${i < timeline.length ? "done" : ""}">
-        ${h}
-      </div>
-    `).join("")}
+  <hr>
 
-    <h4>Receiver</h4>
-    <p>${d.receiverName}</p>
-    <p>${d.receiverAddress}</p>
+  <p><b>From:</b> ${d.from}</p>
+  <p><b>To:</b> ${d.to}</p>
 
-    <button onclick="printReceipt()">Print Receipt</button>
+  <p><b>Weight:</b> ${d.weight || "-"}</p>
+  <p><b>Type:</b> ${d.type || "-"}</p>
+  <p><b>Courier:</b> ${d.courier || "-"}</p>
+
+  <div id="map" style="height:200px;margin-top:10px"></div>
+
+  <h3>Timeline</h3>
+  ${(d.history||[]).map(h=>`<div>${h}</div>`).join("")}
+
+  <h3>Receiver</h3>
+  <p>${d.receiverName}</p>
+  <p>${d.receiverAddress}</p>
+
+  <button onclick="printReceipt()">Print Receipt</button>
 
   </div>
   `;
 
-  /* MAP + ANIMATION */
+  startETA(d.eta || "May 5, 2026 18:00");
+
   setTimeout(()=>{
-
-    const start = [31.2304,121.4737];
-    const end = [14.5995,120.9842];
-
-    const map = L.map("map").setView(start,4);
+    const map = L.map("map").setView([20,120],4);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-    const marker = L.marker(start).addTo(map);
+    const path = [
+      [31.23,121.47],
+      [22.31,114.17],
+      [14.59,120.98]
+    ];
 
-    const route = L.polyline([start, end], {color:"#ff6200"}).addTo(map);
-    map.fitBounds(route.getBounds());
+    const marker = L.marker(path[0]).addTo(map);
+    const line = L.polyline(path,{color:"#ff6200"}).addTo(map);
 
-    let p = 0;
+    map.fitBounds(line.getBounds());
 
+    let i=0;
     const move = setInterval(()=>{
-      p += 0.01;
-      if(p >= 1) clearInterval(move);
-
-      const lat = start[0] + (end[0]-start[0]) * p;
-      const lng = start[1] + (end[1]-start[1]) * p;
-
-      marker.setLatLng([lat,lng]);
-
-    },50);
+      i++;
+      if(i>=path.length) clearInterval(move);
+      else marker.setLatLng(path[i]);
+    },1500);
 
   },200);
 
 }
 
+/* ETA */
+function startETA(dateString){
+  const el = document.getElementById("eta");
+  const target = new Date(dateString).getTime();
+
+  setInterval(()=>{
+    const now = new Date().getTime();
+    const diff = target-now;
+
+    if(diff<=0){ el.innerHTML="Delivered"; return; }
+
+    const h = Math.floor(diff/(1000*60*60));
+    const m = Math.floor((diff%(1000*60*60))/(1000*60));
+
+    el.innerHTML = h+"h "+m+"m";
+  },1000);
+}
+
 /* RECEIPT */
 function printReceipt(){
-
   const w = window.open("");
-
   w.document.write(`
-    <h2>GlobeX Logistics</h2>
-    <p><b>Tracking:</b> ${currentData.trackingCode}</p>
-    <p><b>From:</b> ${currentData.from}</p>
-    <p><b>To:</b> ${currentData.to}</p>
-    <p><b>Receiver:</b> ${currentData.receiverName}</p>
-    <p>${currentData.receiverAddress}</p>
-    <br>
-    <center>||| ${currentData.trackingCode} |||</center>
+  <h2>GlobeX Receipt</h2>
+  <p>${currentData.trackingCode}</p>
+  <p>${currentData.receiverName}</p>
   `);
-
   w.print();
 }
 
